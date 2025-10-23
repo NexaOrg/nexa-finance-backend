@@ -2,8 +2,12 @@ package main
 
 import (
 	"fmt"
+	"nexa/internal/database"
 )
 
 func main() {
-	fmt.Println("hello World!")
+	conn := database.ConnectDB()
+	if conn != nil {
+		fmt.Println("Successful connection!")
+	}
 }
