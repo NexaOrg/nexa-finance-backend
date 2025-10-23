@@ -3,11 +3,11 @@ package handler
 import (
 	"bytes"
 	"fmt"
-	"synap/internal/factory"
-	"synap/internal/model"
-	"synap/internal/repository"
-	"synap/internal/security"
-	"synap/internal/utils"
+	"nexa/internal/factory"
+	"nexa/internal/model"
+	"nexa/internal/repository"
+	"nexa/internal/security"
+	"nexa/internal/utils"
 	"time"
 
 	"github.com/gofiber/fiber/v2"

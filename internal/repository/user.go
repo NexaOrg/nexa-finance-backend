@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
-	"synap/internal/model"
+	"nexa/internal/model"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"

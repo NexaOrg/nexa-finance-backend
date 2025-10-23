@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"synap/internal/model"
+	"nexa/internal/model"
 
 	"github.com/gofiber/fiber/v2"
 )

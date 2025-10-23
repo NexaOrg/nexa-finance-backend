@@ -1,7 +1,7 @@
 package factory
 
 import (
-	"synap/internal/model"
+	"nexa/internal/model"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

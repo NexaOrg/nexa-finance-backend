@@ -3,7 +3,7 @@ package utils
 import (
 	"fmt"
 	"net/http"
-	"synap/internal/model"
+	"nexa/internal/model"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
