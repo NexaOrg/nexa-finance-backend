@@ -1,4 +1,4 @@
-package photodatabase
+package utils
 
 import (
 	"bytes"

@@ -15,7 +15,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	photodatabase "nexa/internal/PhotoDatabase"
 	"nexa/internal/factory"
 	"nexa/internal/model"
 	"nexa/internal/repository"
@@ -363,7 +362,7 @@ func (h *UserHandler) UploadUserImage(c *fiber.Ctx) error {
 		})
 	}
 
-	photoURL, err := photodatabase.UploadPhotoToCloudinary(imageBytes)
+	photoURL, err := utils.UploadPhotoToCloudinary(imageBytes)
 	if err != nil {
 		log.Printf("Erro no upload para Cloudinary: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
