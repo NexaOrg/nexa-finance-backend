@@ -1,23 +1,31 @@
 package database
 
-func MongoConnect() string {
-	return "teste"
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/joho/godotenv"
+)
+
+func ConnectDB() *pgx.Conn {
+	_ = godotenv.Load()
+
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	url := os.Getenv("DB_URL")
+	port := os.Getenv("DB_PORT")
+	name := os.Getenv("DB_NAME")
+
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", user, password, url, port, name)
+
+	conn, err := pgx.Connect(context.Background(), connString)
+
+	if err != nil {
+		fmt.Printf("Connection failed: %v", err)
+		return nil
+	}
+
+	return conn
 }
-
-// func MongoConnect() *mongo.Client {
-// 	if os.Getenv("RAILWAY_ENVIRONMENT") == "" {
-// 	        err := godotenv.Load()
-// 	        if err != nil {
-// 	            log.Println("Arquivo .env não encontrado, seguindo com variáveis de ambiente do sistema.")
-// 		}
-// 	}
-
-// 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-// 	opts := options.Client().ApplyURI(fmt.Sprintf("mongodb+srv://%s:%s@cluster0.ehrx4zi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"))).SetServerAPIOptions(serverAPI)
-// 	client, err := mongo.Connect(context.TODO(), opts)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
-// 	return client
-// }
