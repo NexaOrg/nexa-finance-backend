@@ -1,18 +1,15 @@
 package model
 
-import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
-)
+import "time"
 
 type User struct {
-	IDUser    primitive.ObjectID `json:"idUser,omitempty" bson:"_id,omitempty"`
-	Name      string             `json:"name,omitempty" bson:"name,omitempty"`
-	Nickname  string             `json:"nickname,omitempty" bson:"nickname,omitempty"`
-	Email     string             `json:"email,omitempty" bson:"email,omitempty"`
-	Password  string             `json:"password,omitempty" bson:"password,omitempty"`
-	IsPremium bool               `json:"isPremium,omitempty" bson:"isPremium,omitempy"`
-	IsActive  bool               `json:"isActive,omitempty" bson:"isActive,omitempy"`
-	Bio       string             `json:"bio,omitempty" bson:"bio,omitempty"`
-	PhotoUrl  string             `json:"photoUrl,omitempty" bson:"photoUrl,omitempty"`
-	Banner    string             `json:"banner,omitempty" bson:"banner,omitempty"`
+	ID        int       `json:"id,omitempty"`
+	Username  string    `json:"username,omitempty"`
+	FirstName string    `json:"firstName,omitempty"`
+	LastName  string    `json:"lastName,omitempty"`
+	Email     string    `json:"email,omitempty"`
+	Password  string    `json:"password,omitempty"`
+	PhotoUrl  string    `json:"photoUrl,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
+	LastLogin time.Time `json:"lastLogin"`
 }
