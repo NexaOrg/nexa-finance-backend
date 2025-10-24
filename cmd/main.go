@@ -2,12 +2,15 @@ package main
 
 import (
 	"fmt"
+	"nexa/internal/api"
 	"nexa/internal/database"
 )
 
 func main() {
-	conn := database.ConnectDB()
-	if conn != nil {
+	db := database.ConnectDB()
+	if db != nil {
 		fmt.Println("Successful connection!")
 	}
+
+	api.SetupRoutes(db)
 }

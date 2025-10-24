@@ -1,7 +1,29 @@
 package api
 
-func SetupRoutes(a string) string {
-	return a
+import (
+	"log"
+	"nexa/internal/handler"
+	"os"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/jackc/pgx/v5"
+	"github.com/joho/godotenv"
+)
+
+func SetupRoutes(db *pgx.Conn) {
+	_ = godotenv.Load()
+	port := os.Getenv("API_PORT")
+
+	app := fiber.New()
+	app.Use(cors.New())
+
+	userHandler := handler.NewUserHandler(db)
+
+	app.Post("/user", userHandler.RegisterUser)
+
+	log.Printf("Servidor rodando na porta %s", port)
+	log.Fatal(app.Listen(":" + port))
 }
 
 // func SetupRoutes(client *mongo.Client) {

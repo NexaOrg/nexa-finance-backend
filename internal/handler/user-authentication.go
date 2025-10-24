@@ -12,8 +12,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
+	"github.com/jackc/pgx/v5"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserAuthenticationHandler struct {
@@ -23,10 +23,10 @@ type UserAuthenticationHandler struct {
 	MailServer                     *utils.MailServer
 }
 
-func NewUserAuthenticationHandler(client *mongo.Client, mailServer *utils.MailServer) *UserAuthenticationHandler {
+func NewUserAuthenticationHandler(db *pgx.Conn, mailServer *utils.MailServer) *UserAuthenticationHandler {
 	return &UserAuthenticationHandler{
-		UserRepository:                 repository.NewUserRepository(client, "Cluster0", "users"),
-		UserAuthenticationTokenRepo:    repository.NewUserAuthenticationTokenRepository(client, "Cluster0", "user_authentication_tokens"),
+		UserRepository: repository.NewUserRepository(db),
+		//UserAuthenticationTokenRepo:    repository.NewUserAuthenticationTokenRepository(client, "Cluster0", "user_authentication_tokens"),
 		UserAuthenticationTokenBuilder: factory.NewUserAuthenticationTokenFactory(),
 		MailServer:                     mailServer,
 	}
@@ -147,7 +147,7 @@ func (ua *UserAuthenticationHandler) sendAuthenticationEmail(code string, userID
 	if err = template.Execute(&body, struct {
 		Name string
 		Code string
-	}{Name: user.Name, Code: code}); err != nil {
+	}{Name: user.FirstName, Code: code}); err != nil {
 		return "INTERNAL_SERVER_ERROR", err
 	}
 	if err = ua.MailServer.SendEmailHTML("Validação de E-mail", body.String(), []string{user.Email}); err != nil {

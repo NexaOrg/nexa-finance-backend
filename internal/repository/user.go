@@ -4,63 +4,64 @@ import (
 	"context"
 	"fmt"
 	"nexa/internal/model"
-	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"github.com/jackc/pgx/v5"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserRepository struct {
-	collection *mongo.Collection
+	db *pgx.Conn
 }
 
-func NewUserRepository(client *mongo.Client, dbName, collectionName string) *UserRepository {
+func NewUserRepository(conn *pgx.Conn) *UserRepository {
 	return &UserRepository{
-		collection: client.Database(dbName).Collection(collectionName),
+		db: conn,
 	}
 }
 
 func (b *UserRepository) InsertUser(user *model.User) error {
-	_, err := b.collection.InsertOne(context.TODO(), user)
+	_, err := b.db.Exec(context.Background(), "INSERT INTO db_nexa.tb_user (username, first_name, last_name, email, password, photo_url, last_login) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+		user.Username, user.FirstName, user.LastName, user.Email, user.Password, user.PhotoUrl, user.LastLogin)
+
 	return err
 }
 
-// MÉTODO MODIFICADO AQUI
 func (u *UserRepository) FindByFilter(key string, value interface{}) (*model.User, error) {
 	var user model.User
 
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	// defer cancel()
 
-	filter := bson.M{key: value}
-	result := u.collection.FindOne(ctx, filter)
+	// filter := bson.M{key: value}
+	// result := u.collection.FindOne(ctx, filter)
 
-	if err := result.Err(); err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, nil // Usuário não encontrado não é mais tratado como erro
-		}
-		return nil, fmt.Errorf("failed to find user: %w", err)
-	}
+	// if err := result.Err(); err != nil {
+	// 	if err == mongo.ErrNoDocuments {
+	// 		return nil, nil // Usuário não encontrado não é mais tratado como erro
+	// 	}
+	// 	return nil, fmt.Errorf("failed to find user: %w", err)
+	// }
 
-	if err := result.Decode(&user); err != nil {
-		return nil, fmt.Errorf("failed to decode user: %w", err)
-	}
+	// if err := result.Decode(&user); err != nil {
+	// 	return nil, fmt.Errorf("failed to decode user: %w", err)
+	// }
 
 	return &user, nil
 }
 
 func (u *UserRepository) UpdateByID(id primitive.ObjectID, updateData map[string]interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	// defer cancel()
 
-	filter := bson.M{"_id": id}
+	// filter := bson.M{"_id": id}
 
-	res := u.collection.FindOneAndUpdate(
-		ctx,
-		filter,
-		bson.D{{Key: "$set", Value: updateData}},
-	)
+	// res := u.collection.FindOneAndUpdate(
+	// 	ctx,
+	// 	filter,
+	// 	bson.D{{Key: "$set", Value: updateData}},
+	// )
 
-	return res.Err()
+	// return res.Err()
+
+	return fmt.Errorf("")
 }

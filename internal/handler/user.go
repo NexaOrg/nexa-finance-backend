@@ -2,11 +2,7 @@ package handler
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha1"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -26,120 +22,74 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserHandler struct {
-	UserFactory               *factory.UserFactory
-	UserRepository            *repository.UserRepository
-	UserAuthenticationHandler *UserAuthenticationHandler
+	UserFactory    *factory.UserFactory
+	UserRepository *repository.UserRepository
 }
 
-func NewUserHandler(client *mongo.Client, authHandler *UserAuthenticationHandler) *UserHandler {
+func NewUserHandler(db *pgx.Conn) *UserHandler {
 	return &UserHandler{
-		UserRepository:            repository.NewUserRepository(client, "Cluster0", "users"),
-		UserFactory:               factory.NewUserFactory(),
-		UserAuthenticationHandler: authHandler,
+		UserRepository: repository.NewUserRepository(db),
+		UserFactory:    factory.NewUserFactory(),
 	}
 }
 
 func (u *UserHandler) RegisterUser(c *fiber.Ctx) error {
 	var model model.User
+
 	if err := c.BodyParser(&model); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Dados inválidos"})
 	}
 
-	isValid, err := u.validateUser(&model)
-	if !isValid {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-	}
+	model.LastLogin = time.Now()
 
+	err := u.UserRepository.InsertUser(&model)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to validate user")
-		return c.Status(500).JSON(fiber.Map{"error": "Erro interno"})
+		return c.Status(500).JSON(fiber.Map{"message": "Internal Server Error", "error": err.Error()})
 	}
 
-	rawKey, err := security.LoadPrivateKeyFromEnv()
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Erro ao carregar chave privada"})
-	}
-
-	cipherBytes, err := base64.StdEncoding.DecodeString(model.Password)
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Senha inválida"})
-	}
-
-	var plainBytes []byte
-
-	switch key := rawKey.(type) {
-	case *rsa.PrivateKey:
-		plainBytes, err = rsa.DecryptOAEP(
-			sha256.New(), rand.Reader,
-			key,
-			cipherBytes,
-			nil,
-		)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Falha ao descriptografar senha"})
-		}
-	default:
-		return c.Status(500).JSON(fiber.Map{"error": "Tipo de chave não suportado para descriptografia"})
-	}
-
-	hashed, err := bcrypt.GenerateFromPassword(plainBytes, bcrypt.DefaultCost)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Erro ao gerar hash da senha"})
-	}
-
-	newUser := u.UserFactory.CreateUser(model.Name, model.Email, string(hashed))
-	if err := u.UserRepository.InsertUser(newUser); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Erro ao criar usuário"})
-	}
-
-	if err := u.UserAuthenticationHandler.HandleInitialAuthentication(newUser.IDUser); err != nil {
-		fmt.Println(err)
-		return c.Status(500).JSON(fiber.Map{"error": "Erro ao enviar e-mail de verificação"})
-	}
-
-	return c.Status(201).JSON(fiber.Map{"idUser": newUser.IDUser})
+	return c.Status(201).JSON(fiber.Map{"message": "User creation successful"})
 }
 
 func (u *UserHandler) validateUser(user *model.User) (bool, error) {
-	if user.Name == "" || user.Email == "" || user.Password == "" {
-		return false, fmt.Errorf("todos os campos são obrigatórios")
-	}
+	// if user.Name == "" || user.Email == "" || user.Password == "" {
+	// 	return false, fmt.Errorf("todos os campos são obrigatórios")
+	// }
 
-	if _, err := u.validateName(user.Name); err != nil {
-		return false, err
-	}
+	// if _, err := u.validateName(user.Name); err != nil {
+	// 	return false, err
+	// }
 
-	_, _, err := u.validateEmail(user.Email)
-	return err == nil, err
+	// _, _, err := u.validateEmail(user.Email)
+	return false, nil
 }
 
 func (u *UserHandler) validateEmail(email string) (*primitive.ObjectID, string, error) {
-	if !utils.IsEmailValid(email) {
-		return nil, "INVALID_EMAIL", fmt.Errorf("formato de e-mail inválido")
-	}
+	// if !utils.IsEmailValid(email) {
+	// 	return nil, "INVALID_EMAIL", fmt.Errorf("formato de e-mail inválido")
+	// }
 
-	user, err := u.UserRepository.FindByFilter("email", email)
-	if err != nil {
-		fmt.Println(err)
-		return nil, "INTERNAL_SERVER_ERROR", fmt.Errorf("erro ao acessar o banco de dados")
-	}
+	// user, err := u.UserRepository.FindByFilter("email", email)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return nil, "INTERNAL_SERVER_ERROR", fmt.Errorf("erro ao acessar o banco de dados")
+	// }
 
-	if user == nil {
-		return nil, "", nil
-	}
+	// if user == nil {
+	// 	return nil, "", nil
+	// }
 
-	if user.IsActive {
-		return nil, "USER_ALREADY_REGISTERED", fmt.Errorf("e-mail já registrado")
-	}
+	// if user.IsActive {
+	// 	return nil, "USER_ALREADY_REGISTERED", fmt.Errorf("e-mail já registrado")
+	// }
 
-	return &user.IDUser, "", nil
+	return nil, "", nil
 }
 
 func (u *UserHandler) validateName(name string) (string, error) {
@@ -202,25 +152,25 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 		return nil
 	}
 
-	if !dbUser.IsActive {
-		if err := c.Status(400).JSON(fiber.Map{
-			"status":  400,
-			"message": "This user is not active.",
-			"idUser":  dbUser.IDUser,
-		}); err != nil {
-			log.Error().Err(err).Msg("failed to send JSON response")
+	// if !dbUser.IsActive {
+	// 	if err := c.Status(400).JSON(fiber.Map{
+	// 		"status":  400,
+	// 		"message": "This user is not active.",
+	// 		"idUser":  dbUser.IDUser,
+	// 	}); err != nil {
+	// 		log.Error().Err(err).Msg("failed to send JSON response")
 
-			return fmt.Errorf("failed to encode response: %s", err)
-		}
+	// 		return fmt.Errorf("failed to encode response: %s", err)
+	// 	}
 
-		return nil
-	}
+	// 	return nil
+	// }
 
 	if !u.verifyUserActive(dbUser, c) {
 		return nil
 	}
 
-	token, err := u.UserAuthenticationHandler.CreateToken(dbUser.IDUser, "/login")
+	// token, err := u.UserAuthenticationHandler.CreateToken(dbUser.IDUser, "/login")
 
 	if err != nil {
 		if err := utils.EncodeRequestError(c, "INTERNAL_SERVER_ERROR", "/login"); err != nil {
@@ -234,9 +184,9 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 	if err := c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  fiber.StatusOK,
 		"message": "Login realizado com sucesso!",
-		"token":   token,
-		"idUser":  dbUser.IDUser,
-		"name":    dbUser.Name,
+		// "token":   token,
+		// "idUser":  dbUser.IDUser,
+		// "name":    dbUser.Name,
 	}); err != nil {
 		log.Error().Err(err).Msg("failed to send JSON response")
 
@@ -255,10 +205,10 @@ func (u *UserHandler) validateLoginCredentials(user *model.User, password string
 }
 
 func (u UserHandler) verifyUserActive(user *model.User, c *fiber.Ctx) bool {
-	if !user.IsActive {
-		_ = u.handleLoginError(c, "USER_NOT_ACTIVE")
-		return false
-	}
+	// if !user.IsActive {
+	// 	_ = u.handleLoginError(c, "USER_NOT_ACTIVE")
+	// 	return false
+	// }
 
 	return true
 }
@@ -469,13 +419,13 @@ func (h *UserHandler) UploadUserBanner(c *fiber.Ctx) error {
 		})
 	}
 
-	user, err := h.UserRepository.FindByFilter("_id", userID)
-	if err == nil && user.Banner != "" {
-		publicID := utils.ExtractPublicID(user.Banner)
-		if publicID != "" {
-			_ = deleteCloudinaryImage(publicID)
-		}
-	}
+	// user, err := h.UserRepository.FindByFilter("_id", userID)
+	// if err == nil && user.Banner != "" {
+	// 	publicID := utils.ExtractPublicID(user.Banner)
+	// 	if publicID != "" {
+	// 		_ = deleteCloudinaryImage(publicID)
+	// 	}
+	// }
 
 	file, err := fileHeader.Open()
 	if err != nil {
@@ -505,7 +455,11 @@ func (h *UserHandler) UploadUserBanner(c *fiber.Ctx) error {
 			"error": "error preparing upload",
 		})
 	}
+
 	_, err = io.Copy(part, file)
+	if err != nil {
+		return err
+	}
 	writer.Close()
 
 	uploadURL := fmt.Sprintf("https://api.cloudinary.com/v1_1/%s/image/upload", cloudName)
