@@ -44,7 +44,7 @@ func (u *UserHandler) RegisterUser(c *fiber.Ctx) error {
 	var model model.User
 
 	if err := c.BodyParser(&model); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Dados inválidos"})
+		return c.Status(400).JSON(utils.EncodeRequestError(c, "INVALID_BODY_FORMAT"))
 	}
 
 	model.LastLogin = time.Now()
@@ -92,7 +92,7 @@ func (u *UserHandler) validateEmail(email string) (*primitive.ObjectID, string, 
 	return nil, "", nil
 }
 
-func (u *UserHandler) validateName(name string) (string, error) {
+func (u *UserHandler) ValidateName(name string) (string, error) {
 	const MaxLength = 200
 	if name == "" {
 		return "REQUIRED_NAME", fmt.Errorf("nome é obrigatório")
@@ -172,15 +172,15 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 
 	// token, err := u.UserAuthenticationHandler.CreateToken(dbUser.IDUser, "/login")
 
-	if err != nil {
-		if err := utils.EncodeRequestError(c, "INTERNAL_SERVER_ERROR", "/login"); err != nil {
-			log.Error().Err(err).Msg("failed to send JSON response")
+	// if err != nil {
+	// 	if err := utils.EncodeRequestError(c, "INTERNAL_SERVER_ERROR", "/login"); err != nil {
+	// 		log.Error().Err(err).Msg("failed to send JSON response")
 
-			return fmt.Errorf("failed to encode request error: %s", err)
-		}
+	// 		return fmt.Errorf("failed to encode request error: %s", err)
+	// 	}
 
-		return nil
-	}
+	// 	return nil
+	// }
 	if err := c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  fiber.StatusOK,
 		"message": "Login realizado com sucesso!",
