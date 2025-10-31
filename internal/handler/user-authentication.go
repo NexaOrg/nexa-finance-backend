@@ -147,7 +147,7 @@ func (ua *UserAuthenticationHandler) sendAuthenticationEmail(code string, userID
 	if err = template.Execute(&body, struct {
 		Name string
 		Code string
-	}{Name: user.FirstName, Code: code}); err != nil {
+	}{Name: user.Name, Code: code}); err != nil {
 		return "INTERNAL_SERVER_ERROR", err
 	}
 	if err = ua.MailServer.SendEmailHTML("Validação de E-mail", body.String(), []string{user.Email}); err != nil {

@@ -4,12 +4,12 @@ import "time"
 
 type User struct {
 	ID        int       `json:"id,omitempty"`
+	Name      string    `json:"name,omitempty"`
 	Username  string    `json:"username,omitempty"`
-	FirstName string    `json:"firstName,omitempty"`
-	LastName  string    `json:"lastName,omitempty"`
 	Email     string    `json:"email,omitempty"`
 	Password  string    `json:"password,omitempty"`
-	PhotoUrl  string    `json:"photoUrl,omitempty"`
+	PhotoUrl  string    `json:"photo_url,omitempty"`
+	Score     int       `json:"score,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 	LastLogin time.Time `json:"lastLogin"`
 }

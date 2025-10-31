@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func EncodeRequestError(c *fiber.Ctx, errorType, path string) error {
+func EncodeRequestError(c *fiber.Ctx, errorType string, path ...string) error {
 	errorResponse, exists := HTTPErrors[errorType]
 	if !exists {
 		if err := c.SendStatus(404); err != nil {
@@ -19,7 +19,9 @@ func EncodeRequestError(c *fiber.Ctx, errorType, path string) error {
 		return fmt.Errorf("error not found: %s", errorType)
 	}
 
-	errorResponse.Path = path
+	if len(path) != 0 {
+		errorResponse.Path = path[0]
+	}
 
 	if err := c.Status(errorResponse.StatusCode).JSON(errorResponse); err != nil {
 		return fmt.Errorf("failed to send JSON with status %d: %w", errorResponse.StatusCode, err)
@@ -33,18 +35,6 @@ var HTTPErrors = map[string]model.ErrorResponse{
 		StatusCode: 400,
 		Error:      "Bad Request",
 		Message:    "formato de IDUser inválido",
-		Timestamp:  time.Now(),
-	},
-	"INVALID_ID_QUIZ": {
-		StatusCode: 400,
-		Error:      "Bad Request",
-		Message:    "formato de IDQuiz inválido",
-		Timestamp:  time.Now(),
-	},
-	"USER_QUIZ_NOT_FOUND": {
-		StatusCode: 404,
-		Error:      "Not Found",
-		Message:    "User or quiz not found.",
 		Timestamp:  time.Now(),
 	},
 	"REQUIRED_EMAIL": {
@@ -67,7 +57,7 @@ var HTTPErrors = map[string]model.ErrorResponse{
 		Message:    "wait-list",
 		Timestamp:  time.Now(),
 	},
-	"USER_ALEADY_REGISTERED": {
+	"USER_ALREADY_REGISTERED": {
 		StatusCode: 403,
 		Error:      "Forbidden",
 		Message:    "E-mail já está em uso",

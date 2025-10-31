@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dlclark/regexp2"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -44,12 +46,37 @@ func (u *UserHandler) RegisterUser(c *fiber.Ctx) error {
 	var model model.User
 
 	if err := c.BodyParser(&model); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Dados inválidos"})
+		return c.Status(400).JSON(utils.EncodeRequestError(c, "INVALID_BODY_FORMAT"))
+	}
+
+	if len(model.Name) > 20 {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid name", "message": "O nome não deve conter mais de 20 caracteres"})
+	}
+
+	passwordRegex := regexp2.MustCompile(`^(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%\^&\*\(\)_\+\-=\[\]{};':"\\|,.<>\/?]).{6,}$`, 0)
+	match, _ := passwordRegex.MatchString(model.Password)
+
+	if !match {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid password", "message": "A senha deve possuir no mínimo 6 caracteres, contendo uma letra maiúscula, um número e um caractere especial"})
+	}
+
+	emailRegex := regexp2.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`, 0)
+	match, _ = emailRegex.MatchString(model.Email)
+
+	if !match {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid email", "message": "O email inserido não é válido"})
 	}
 
 	model.LastLogin = time.Now()
 
-	err := u.UserRepository.InsertUser(&model)
+	hash, err := security.EncryptPassword(model.Password)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "Internal Server Error", "error": err.Error()})
+	}
+
+	model.Password = string(hash)
+
+	err = u.UserRepository.InsertUser(&model)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Internal Server Error", "error": err.Error()})
 	}
@@ -92,7 +119,7 @@ func (u *UserHandler) validateEmail(email string) (*primitive.ObjectID, string, 
 	return nil, "", nil
 }
 
-func (u *UserHandler) validateName(name string) (string, error) {
+func (u *UserHandler) ValidateName(name string) (string, error) {
 	const MaxLength = 200
 	if name == "" {
 		return "REQUIRED_NAME", fmt.Errorf("nome é obrigatório")
@@ -172,15 +199,15 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 
 	// token, err := u.UserAuthenticationHandler.CreateToken(dbUser.IDUser, "/login")
 
-	if err != nil {
-		if err := utils.EncodeRequestError(c, "INTERNAL_SERVER_ERROR", "/login"); err != nil {
-			log.Error().Err(err).Msg("failed to send JSON response")
+	// if err != nil {
+	// 	if err := utils.EncodeRequestError(c, "INTERNAL_SERVER_ERROR", "/login"); err != nil {
+	// 		log.Error().Err(err).Msg("failed to send JSON response")
 
-			return fmt.Errorf("failed to encode request error: %s", err)
-		}
+	// 		return fmt.Errorf("failed to encode request error: %s", err)
+	// 	}
 
-		return nil
-	}
+	// 	return nil
+	// }
 	if err := c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  fiber.StatusOK,
 		"message": "Login realizado com sucesso!",
