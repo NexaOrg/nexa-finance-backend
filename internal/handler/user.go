@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dlclark/regexp2"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -47,9 +49,34 @@ func (u *UserHandler) RegisterUser(c *fiber.Ctx) error {
 		return c.Status(400).JSON(utils.EncodeRequestError(c, "INVALID_BODY_FORMAT"))
 	}
 
+	if len(model.Name) > 20 {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid name", "message": "O nome não deve conter mais de 20 caracteres"})
+	}
+
+	passwordRegex := regexp2.MustCompile(`^(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%\^&\*\(\)_\+\-=\[\]{};':"\\|,.<>\/?]).{6,}$`, 0)
+	match, _ := passwordRegex.MatchString(model.Password)
+
+	if !match {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid password", "message": "A senha deve possuir no mínimo 6 caracteres, contendo uma letra maiúscula, um número e um caractere especial"})
+	}
+
+	emailRegex := regexp2.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`, 0)
+	match, _ = emailRegex.MatchString(model.Email)
+
+	if !match {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid email", "message": "O email inserido não é válido"})
+	}
+
 	model.LastLogin = time.Now()
 
-	err := u.UserRepository.InsertUser(&model)
+	hash, err := security.EncryptPassword(model.Password)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "Internal Server Error", "error": err.Error()})
+	}
+
+	model.Password = string(hash)
+
+	err = u.UserRepository.InsertUser(&model)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Internal Server Error", "error": err.Error()})
 	}

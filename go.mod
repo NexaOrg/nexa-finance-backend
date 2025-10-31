@@ -12,6 +12,8 @@ require (
 	golang.org/x/crypto v0.43.0
 )
 
+require github.com/dlclark/regexp2 v1.11.5
+
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
