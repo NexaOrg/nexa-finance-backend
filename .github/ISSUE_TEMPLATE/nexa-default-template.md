@@ -9,9 +9,7 @@ assignees: ''
 
 ## 🧠 Descrição
 
-Descreva brevemente o que precisa ser feito. Seja claro e direto.
-
-> Ex: Corrigir o layout do componente de login em telas pequenas, ajustar endpoint de autenticação.
+### 
 
 ---
 
@@ -22,15 +20,3 @@ Descreva brevemente o que precisa ser feito. Seja claro e direto.
 - [ ] PR aberto e vinculado à issue
 - [ ] Código revisado por pelo menos 1 dev
 - [ ] Merge realizado
-
----
-
-## 🎯 Objetivo
-
-Qual o objetivo final dessa tarefa? O que precisa estar funcionando/concluído?
-
----
-
-## 📎 Observações adicionais
-
-Inclua links, prints, ou qualquer outro contexto necessário aqui.
