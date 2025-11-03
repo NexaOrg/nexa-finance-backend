@@ -10,7 +10,9 @@ import (
 )
 
 func ConnectDB() *pgx.Conn {
-	_ = godotenv.Load()
+	if os.Getenv("RENDER") == "" {
+		_ = godotenv.Load()
+	}
 
 	user := os.Getenv("DB_USER")
 	password := os.Getenv("DB_PASSWORD")
