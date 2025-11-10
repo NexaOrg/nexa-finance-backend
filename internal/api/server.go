@@ -20,6 +20,10 @@ func SetupRoutes(db *pgx.Conn) {
 
 	userHandler := handler.NewUserHandler(db)
 
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString("🚀 Nexa API rodando com sucesso!")
+	})
+
 	app.Post("/user", userHandler.RegisterUser)
 
 	log.Printf("Servidor rodando na porta %s", port)
