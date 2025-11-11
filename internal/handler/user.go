@@ -183,7 +183,7 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 		if err := c.Status(400).JSON(fiber.Map{
 			"status":  400,
 			"message": "This user is not active.",
-			"idUser":  dbUser.IDUser,
+			"idUser":  dbUser.ID,
 		}); err != nil {
 			log.Error().Err(err).Msg("failed to send JSON response")
 
@@ -197,7 +197,7 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 		return nil
 	}
 
-	token, err := u.UserAuthenticationHandler.CreateToken(dbUser.IDUser, "/login")
+	token, err := u.UserAuthenticationHandler.CreateToken(dbUser.ID, "/login")
 
 	if err != nil {
 		if err := utils.EncodeRequestError(c, "INTERNAL_SERVER_ERROR", "/login"); err != nil {
@@ -212,7 +212,7 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 		"status":  fiber.StatusOK,
 		"message": "Login realizado com sucesso!",
 		"token":   token,
-		"idUser":  dbUser.IDUser,
+		"idUser":  dbUser.ID,
 		"name":    dbUser.Name,
 	}); err != nil {
 		log.Error().Err(err).Msg("failed to send JSON response")
