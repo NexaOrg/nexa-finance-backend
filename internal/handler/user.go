@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"nexa/internal/factory"
-	"nexa/internal/handler"
 	"nexa/internal/model"
 	"nexa/internal/repository"
 	"nexa/internal/security"
@@ -41,7 +40,7 @@ func NewUserHandler(db *pgx.Conn) *UserHandler {
 	return &UserHandler{
 		UserRepository:            repository.NewUserRepository(db),
 		UserFactory:               factory.NewUserFactory(),
-		UserAuthenticationHandler: handler.NewUserAuthenticationHandler(),
+		UserAuthenticationHandler: NewUserAuthenticationHandler(nil, nil), //argumentos nulos provisorios enquanto logica de email nao implementada
 	}
 }
 
@@ -200,7 +199,7 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 		return nil
 	}
 
-	token, err := u.UserAuthenticationHandler.CreateToken(dbUser.ID, "/login")
+	token, err := u.UserAuthenticationHandler.CreateToken(dbUser.ID, "/auth/login")
 
 	if err != nil {
 		if err := utils.EncodeRequestError(c, "INTERNAL_SERVER_ERROR", "/login"); err != nil {
