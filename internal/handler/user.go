@@ -27,7 +27,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserHandler struct {
@@ -145,84 +144,67 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 
 	_, err := utils.ParseBody(c, &user)
 	if err != nil {
-		return fmt.Errorf("failed to parse body: %s", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "INVALID_BODY_FORMAT",
+			"message": fmt.Sprintf("failed to parse body: %s", err),
+		})
 	}
 
-	email := strings.ToLower(user.Email)
+	email := strings.ToLower(strings.TrimSpace(user.Email))
+	if email == "" || user.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "INVALID_CREDENTIALS",
+			"message": "Email e senha são obrigatórios",
+		})
+	}
 
-	dbUser, err := u.UserRepository.FindByFilter("email", strings.TrimSpace(email))
+	dbUser, err := u.UserRepository.FindByFilter("email", email)
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			if err := utils.EncodeRequestError(c, "INVALID_LOGIN_CREDENTIALS", "/login"); err != nil {
-				log.Error().Err(err).Msg("failed to send JSON response")
+		log.Error().Err(err).Msg("failed to query user")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "INTERNAL_SERVER_ERROR",
+			"message": "Erro ao buscar usuário no banco de dados",
+		})
+	}
 
-				return fmt.Errorf("failed to encode request error: %s", err)
-			}
-
-			return nil
-		}
-
-		if err := utils.EncodeRequestError(c, err.Error(), "/login"); err != nil {
-			log.Error().Err(err).Msg("failed to send JSON response")
-
-			return fmt.Errorf("failed to encode request error: %s", err)
-		}
-
-		return nil
+	if dbUser == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error":   "INVALID_CREDENTIALS",
+			"message": "Email ou senha incorretos",
+		})
 	}
 
 	if err := u.validateLoginCredentials(dbUser, user.Password); err != nil {
-		if err := utils.EncodeRequestError(c, "INVALID_LOGIN_CREDENTIALS", "/login"); err != nil {
-			log.Error().Err(err).Msg("failed to send JSON response")
-
-			return fmt.Errorf("failed to encode request error: %s", err)
-		}
-
-		return nil
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error":   "INVALID_CREDENTIALS",
+			"message": "Email ou senha incorretos",
+		})
 	}
 
 	if !dbUser.IsActive {
-		if err := c.Status(400).JSON(fiber.Map{
-			"status":  400,
-			"message": "This user is not active.",
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"status":  fiber.StatusForbidden,
+			"message": "Este usuário está inativo.",
 			"idUser":  dbUser.ID,
-		}); err != nil {
-			log.Error().Err(err).Msg("failed to send JSON response")
-
-			return fmt.Errorf("failed to encode response: %s", err)
-		}
-
-		return nil
-	}
-
-	if !u.verifyUserActive(dbUser, c) {
-		return nil
+		})
 	}
 
 	token, err := u.UserAuthenticationHandler.CreateToken(dbUser.ID, "/auth/login")
-
 	if err != nil {
-		if err := utils.EncodeRequestError(c, "INTERNAL_SERVER_ERROR", "/login"); err != nil {
-			log.Error().Err(err).Msg("failed to send JSON response")
-
-			return fmt.Errorf("failed to encode request error: %s", err)
-		}
-
-		return nil
+		log.Error().Err(err).Msg("failed to create JWT token")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "INTERNAL_SERVER_ERROR",
+			"message": "Falha ao gerar token de autenticação",
+		})
 	}
-	if err := c.Status(fiber.StatusOK).JSON(fiber.Map{
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  fiber.StatusOK,
 		"message": "Login realizado com sucesso!",
 		"token":   token,
 		"idUser":  dbUser.ID,
 		"name":    dbUser.Name,
-	}); err != nil {
-		log.Error().Err(err).Msg("failed to send JSON response")
-
-		return fmt.Errorf("failed to encode response: %s", err)
-	}
-
-	return nil
+	})
 }
 
 func (u *UserHandler) validateLoginCredentials(user *model.User, password string) error {
