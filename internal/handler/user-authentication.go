@@ -8,6 +8,7 @@ import (
 	"nexa/internal/repository"
 	"nexa/internal/security"
 	"nexa/internal/utils"
+	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -167,18 +168,19 @@ func (ua *UserAuthenticationHandler) GetPublicKey(c *fiber.Ctx) error {
 
 var secretKey = []byte("secret-key")
 
-func (ua *UserAuthenticationHandler) CreateToken(id primitive.ObjectID, issuer string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
-		jwt.MapClaims{
-			"sub": id.Hex(),
-			"iss": issuer,
-			"iat": time.Now().Unix(),
-			"exp": time.Now().Add(time.Hour * 2).Unix(),
-		})
+func (ua *UserAuthenticationHandler) CreateToken(id string, issuer string) (string, error) {
+	secretKey := []byte(os.Getenv("JWT_SECRET"))
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": id,
+		"iss": issuer,
+		"iat": time.Now().Unix(),
+		"exp": time.Now().Add(2 * time.Hour).Unix(),
+	})
 
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
-		return "", fmt.Errorf("failed to stringfy token")
+		return "", fmt.Errorf("failed to stringify token: %w", err)
 	}
 
 	return tokenString, nil
