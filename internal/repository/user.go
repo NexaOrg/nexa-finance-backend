@@ -29,7 +29,6 @@ func (b *UserRepository) InsertUser(user *model.User) error {
 func (u *UserRepository) FindByFilter(key string, value any) (*model.User, error) {
 	var user model.User
 
-	// ⚠️ Proteção contra SQL Injection
 	validKeys := map[string]bool{
 		"id":       true,
 		"email":    true,
@@ -41,8 +40,12 @@ func (u *UserRepository) FindByFilter(key string, value any) (*model.User, error
 		return nil, fmt.Errorf("invalid filter key: %s", key)
 	}
 
-	query := fmt.Sprintf(`SELECT id, name, username, email, password, photo_url, score, created_at, last_login 
-		FROM db_nexa.tb_user WHERE %s = $1 LIMIT 1`, key)
+	query := fmt.Sprintf(`
+		SELECT id, name, username, email, password, photo_url, score, created_at, last_login, is_active
+		FROM db_nexa.tb_user 
+		WHERE %s = $1 
+		LIMIT 1
+	`, key)
 
 	err := u.db.QueryRow(context.Background(), query, value).Scan(
 		&user.ID,
@@ -54,6 +57,7 @@ func (u *UserRepository) FindByFilter(key string, value any) (*model.User, error
 		&user.Score,
 		&user.CreatedAt,
 		&user.LastLogin,
+		&user.IsActive,
 	)
 
 	if err != nil {
