@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"nexa/internal/factory"
+	"nexa/internal/handler"
 	"nexa/internal/model"
 	"nexa/internal/repository"
 	"nexa/internal/security"
@@ -31,14 +32,16 @@ import (
 )
 
 type UserHandler struct {
-	UserFactory    *factory.UserFactory
-	UserRepository *repository.UserRepository
+	UserFactory               *factory.UserFactory
+	UserRepository            *repository.UserRepository
+	UserAuthenticationHandler *UserAuthenticationHandler
 }
 
 func NewUserHandler(db *pgx.Conn) *UserHandler {
 	return &UserHandler{
-		UserRepository: repository.NewUserRepository(db),
-		UserFactory:    factory.NewUserFactory(),
+		UserRepository:            repository.NewUserRepository(db),
+		UserFactory:               factory.NewUserFactory(),
+		UserAuthenticationHandler: handler.NewUserAuthenticationHandler(),
 	}
 }
 
