@@ -12,4 +12,5 @@ type User struct {
 	Score     int       `json:"score,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 	LastLogin time.Time `json:"lastLogin"`
+	IsActive  bool      `json:"isActive"`
 }

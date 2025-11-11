@@ -179,41 +179,41 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 		return nil
 	}
 
-	// if !dbUser.IsActive {
-	// 	if err := c.Status(400).JSON(fiber.Map{
-	// 		"status":  400,
-	// 		"message": "This user is not active.",
-	// 		"idUser":  dbUser.IDUser,
-	// 	}); err != nil {
-	// 		log.Error().Err(err).Msg("failed to send JSON response")
+	if !dbUser.IsActive {
+		if err := c.Status(400).JSON(fiber.Map{
+			"status":  400,
+			"message": "This user is not active.",
+			"idUser":  dbUser.IDUser,
+		}); err != nil {
+			log.Error().Err(err).Msg("failed to send JSON response")
 
-	// 		return fmt.Errorf("failed to encode response: %s", err)
-	// 	}
+			return fmt.Errorf("failed to encode response: %s", err)
+		}
 
-	// 	return nil
-	// }
+		return nil
+	}
 
 	if !u.verifyUserActive(dbUser, c) {
 		return nil
 	}
 
-	// token, err := u.UserAuthenticationHandler.CreateToken(dbUser.IDUser, "/login")
+	token, err := u.UserAuthenticationHandler.CreateToken(dbUser.IDUser, "/login")
 
-	// if err != nil {
-	// 	if err := utils.EncodeRequestError(c, "INTERNAL_SERVER_ERROR", "/login"); err != nil {
-	// 		log.Error().Err(err).Msg("failed to send JSON response")
+	if err != nil {
+		if err := utils.EncodeRequestError(c, "INTERNAL_SERVER_ERROR", "/login"); err != nil {
+			log.Error().Err(err).Msg("failed to send JSON response")
 
-	// 		return fmt.Errorf("failed to encode request error: %s", err)
-	// 	}
+			return fmt.Errorf("failed to encode request error: %s", err)
+		}
 
-	// 	return nil
-	// }
+		return nil
+	}
 	if err := c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  fiber.StatusOK,
 		"message": "Login realizado com sucesso!",
-		// "token":   token,
-		// "idUser":  dbUser.IDUser,
-		// "name":    dbUser.Name,
+		"token":   token,
+		"idUser":  dbUser.IDUser,
+		"name":    dbUser.Name,
 	}); err != nil {
 		log.Error().Err(err).Msg("failed to send JSON response")
 
