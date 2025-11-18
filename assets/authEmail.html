@@ -215,10 +215,8 @@
         const submitBtn = document.getElementById('submitBtn');
         const resendLink = document.getElementById('resendLink');
 
-        // Auto-focus no primeiro input
         inputs[0].focus();
 
-        // Função para verificar se todos os inputs estão preenchidos
         function checkAllFilled() {
             const allFilled = Array.from(inputs).every(input => input.value !== '');
             if (allFilled) {
@@ -228,26 +226,21 @@
             }
         }
 
-        // Adicionar eventos em cada input
         inputs.forEach((input, index) => {
-            // Permitir apenas números
             input.addEventListener('input', (e) => {
                 const value = e.target.value;
                 
-                // Aceita apenas números
                 if (!/^\d*$/.test(value)) {
                     e.target.value = '';
                     return;
                 }
 
-                // Adiciona classe quando preenchido
                 if (value !== '') {
                     e.target.classList.add('filled');
                 } else {
                     e.target.classList.remove('filled');
                 }
 
-                // Move para o próximo input automaticamente
                 if (value !== '' && index < inputs.length - 1) {
                     inputs[index + 1].focus();
                 }
@@ -255,14 +248,12 @@
                 checkAllFilled();
             });
 
-            // Navegar com backspace
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Backspace' && input.value === '' && index > 0) {
                     inputs[index - 1].focus();
                 }
             });
 
-            // Colar código completo
             input.addEventListener('paste', (e) => {
                 e.preventDefault();
                 const pastedData = e.clipboardData.getData('text').slice(0, 4);
@@ -282,24 +273,20 @@
             });
         });
 
-        // Botão de envio
         submitBtn.addEventListener('click', () => {
             if (submitBtn.classList.contains('active')) {
                 const code = Array.from(inputs).map(input => input.value).join('');
                 console.log('Código enviado:', code);
                 alert(`Código ${code} verificado com sucesso!`);
                 
-                // Aqui você adicionaria a lógica de envio para seu backend
-                // fetch('/api/verify', { method: 'POST', body: JSON.stringify({ code }) })
+                //adicionar axios aqui
             }
         });
 
-        // Reenviar código
         resendLink.addEventListener('click', (e) => {
             e.preventDefault();
             alert('Novo código enviado para seu email!');
             
-            // Limpar inputs
             inputs.forEach(input => {
                 input.value = '';
                 input.classList.remove('filled');
