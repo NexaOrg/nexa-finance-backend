@@ -3,7 +3,7 @@ package model
 import "time"
 
 type User struct {
-	ID        int       `json:"id,omitempty"`
+	ID        string    `json:"id,omitempty"`
 	Name      string    `json:"name,omitempty"`
 	Username  string    `json:"username,omitempty"`
 	Email     string    `json:"email,omitempty"`
@@ -12,4 +12,5 @@ type User struct {
 	Score     int       `json:"score,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 	LastLogin time.Time `json:"lastLogin"`
+	IsActive  bool      `json:"isActive"`
 }

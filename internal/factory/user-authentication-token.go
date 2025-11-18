@@ -1,11 +1,8 @@
 package factory
 
 import (
-	"time"
-
 	"nexa/internal/model"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
 )
 
 type UserAuthenticationTokenFactory struct{}
@@ -14,13 +11,11 @@ func NewUserAuthenticationTokenFactory() *UserAuthenticationTokenFactory {
 	return &UserAuthenticationTokenFactory{}
 }
 
-func (*UserAuthenticationTokenFactory) CreateUserAuthenticationToken(userID primitive.ObjectID, token string, duration int) *model.UserAuthenticationToken {
-	expiresAt := time.Now().Add(time.Minute * time.Duration(duration))
-
+func (f *UserAuthenticationTokenFactory) CreateUserAuthenticationToken(userID, code string, ttlMinutes int) *model.UserAuthenticationToken {
 	return &model.UserAuthenticationToken{
 		UserID:    userID,
-		Code:      token,
+		Code:      code,
+		ExpiresAt: time.Now().Add(time.Duration(ttlMinutes) * time.Minute),
 		Fails:     0,
-		ExpiresAt: expiresAt,
 	}
 }

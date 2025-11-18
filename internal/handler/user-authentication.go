@@ -8,12 +8,12 @@ import (
 	"nexa/internal/repository"
 	"nexa/internal/security"
 	"nexa/internal/utils"
+	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
 	"github.com/jackc/pgx/v5"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UserAuthenticationHandler struct {
@@ -25,14 +25,14 @@ type UserAuthenticationHandler struct {
 
 func NewUserAuthenticationHandler(db *pgx.Conn, mailServer *utils.MailServer) *UserAuthenticationHandler {
 	return &UserAuthenticationHandler{
-		UserRepository: repository.NewUserRepository(db),
-		//UserAuthenticationTokenRepo:    repository.NewUserAuthenticationTokenRepository(client, "Cluster0", "user_authentication_tokens"),
+		UserRepository:                 repository.NewUserRepository(db),
+		UserAuthenticationTokenRepo:    repository.NewUserAuthenticationTokenRepository(db, "db_nexa", "tb_user_authentication_token"),
 		UserAuthenticationTokenBuilder: factory.NewUserAuthenticationTokenFactory(),
 		MailServer:                     mailServer,
 	}
 }
 
-func (ua *UserAuthenticationHandler) HandleInitialAuthentication(userID primitive.ObjectID) error {
+func (ua *UserAuthenticationHandler) HandleInitialAuthentication(userID string) error {
 	token, err := ua.createUserAuthenticationToken(userID)
 	if err != nil {
 		return err
@@ -61,7 +61,8 @@ func (ua *UserAuthenticationHandler) VerifyUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	tokenStr, err := utils.GenerateJWT(userID.Hex())
+	// Gere o JWT com o ID do usuário como sub
+	tokenStr, err := utils.GenerateJWT(userID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Erro ao gerar token"})
 	}
@@ -69,28 +70,31 @@ func (ua *UserAuthenticationHandler) VerifyUser(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"token": tokenStr})
 }
 
-func (ua *UserAuthenticationHandler) activateUserAccount(userObjectID primitive.ObjectID) error {
-	return ua.UserRepository.UpdateByID(userObjectID, map[string]interface{}{"isActive": true})
+func (ua *UserAuthenticationHandler) activateUserAccount(userID string) error {
+	return ua.UserRepository.UpdateByID(userID, map[string]interface{}{"is_active": true})
 }
 
-func (ua *UserAuthenticationHandler) getUserIDAndCode(c *fiber.Ctx) (primitive.ObjectID, string, error) {
+func (ua *UserAuthenticationHandler) getUserIDAndCode(c *fiber.Ctx) (string, string, error) {
 	var request struct {
 		UserID string `json:"idUser"`
 		Code   string `json:"code"`
 	}
 	if err := c.BodyParser(&request); err != nil {
-		return primitive.NilObjectID, "", err
+		return "", "", err
 	}
-	userObjectID, err := primitive.ObjectIDFromHex(request.UserID)
-	if err != nil {
-		return primitive.NilObjectID, "", err
+	if request.UserID == "" || request.Code == "" {
+		return "", "", fmt.Errorf("userID or code missing")
 	}
-	return userObjectID, request.Code, nil
+	return request.UserID, request.Code, nil
 }
 
-func (ua *UserAuthenticationHandler) validateTokenAndCreateNewIfNeeded(token *model.UserAuthenticationToken, userID primitive.ObjectID, code string) (string, error) {
+func (ua *UserAuthenticationHandler) validateTokenAndCreateNewIfNeeded(token *model.UserAuthenticationToken, userID, code string) (string, error) {
 	if token == nil || token.HasExpired() || token.Fails > 2 {
-		HTTPError, err := ua.deleteAndCreateNewUserAuthenticationToken(token.ID, userID)
+		var tokenID string
+		if token != nil {
+			tokenID = token.ID
+		}
+		HTTPError, err := ua.deleteAndCreateNewUserAuthenticationToken(tokenID, userID)
 		if err != nil {
 			return HTTPError, err
 		}
@@ -105,9 +109,9 @@ func (ua *UserAuthenticationHandler) validateTokenAndCreateNewIfNeeded(token *mo
 	return "", nil
 }
 
-func (ua *UserAuthenticationHandler) deleteAndCreateNewUserAuthenticationToken(tokenID, userID primitive.ObjectID) (string, error) {
-	if err := ua.UserAuthenticationTokenRepo.Delete(tokenID); err != nil {
-		return "INTERNAL_SERVER_ERROR", err
+func (ua *UserAuthenticationHandler) deleteAndCreateNewUserAuthenticationToken(tokenID, userID string) (string, error) {
+	if tokenID != "" {
+		_ = ua.UserAuthenticationTokenRepo.Delete(tokenID)
 	}
 	token, err := ua.createUserAuthenticationToken(userID)
 	if err != nil {
@@ -120,12 +124,13 @@ func (ua *UserAuthenticationHandler) deleteAndCreateNewUserAuthenticationToken(t
 	return "", nil
 }
 
-func (ua *UserAuthenticationHandler) createUserAuthenticationToken(userID primitive.ObjectID) (*model.UserAuthenticationToken, error) {
+func (ua *UserAuthenticationHandler) createUserAuthenticationToken(userID string) (*model.UserAuthenticationToken, error) {
 	code, err := utils.GenerateCode(4)
 	if err != nil {
 		return nil, err
 	}
 	token := ua.UserAuthenticationTokenBuilder.CreateUserAuthenticationToken(userID, code, 1440)
+	// Insere e obtém ID gerado
 	id, err := ua.UserAuthenticationTokenRepo.Insert(token)
 	if err != nil {
 		return nil, err
@@ -134,30 +139,40 @@ func (ua *UserAuthenticationHandler) createUserAuthenticationToken(userID primit
 	return token, nil
 }
 
-func (ua *UserAuthenticationHandler) sendAuthenticationEmail(code string, userID primitive.ObjectID) (string, error) {
-	user, err := ua.UserRepository.FindByFilter("_id", userID)
+func (ua *UserAuthenticationHandler) sendAuthenticationEmail(code string, userID string) (string, error) {
+	user, err := ua.UserRepository.FindByFilter("id", userID)
 	if err != nil {
 		return "INTERNAL_SERVER_ERROR", err
 	}
+	if user == nil {
+		return "NOT_FOUND", fmt.Errorf("user not found")
+	}
+
 	var body bytes.Buffer
 	template, err := utils.ParseFile("assets/index.html")
 	if err != nil {
 		return "INTERNAL_SERVER_ERROR", err
 	}
+
 	if err = template.Execute(&body, struct {
 		Name string
 		Code string
 	}{Name: user.Name, Code: code}); err != nil {
 		return "INTERNAL_SERVER_ERROR", err
 	}
-	if err = ua.MailServer.SendEmailHTML("Validação de E-mail", body.String(), []string{user.Email}); err != nil {
+
+	if err = ua.MailServer.SendEmailHTML(
+		"Validação de E-mail",
+		body.String(),
+		[]string{user.Email},
+	); err != nil {
 		return "INTERNAL_SERVER_ERROR", err
 	}
+
 	return "", nil
 }
 
 func (ua *UserAuthenticationHandler) GetPublicKey(c *fiber.Ctx) error {
-	// Agora retorna a chave PEM diretamente
 	pubPEM, err := security.LoadPublicKeyPEMFlatString()
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Erro ao carregar chave pública"})
@@ -167,18 +182,19 @@ func (ua *UserAuthenticationHandler) GetPublicKey(c *fiber.Ctx) error {
 
 var secretKey = []byte("secret-key")
 
-func (ua *UserAuthenticationHandler) CreateToken(id primitive.ObjectID, issuer string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
-		jwt.MapClaims{
-			"sub": id.Hex(),
-			"iss": issuer,
-			"iat": time.Now().Unix(),
-			"exp": time.Now().Add(time.Hour * 2).Unix(),
-		})
+func (ua *UserAuthenticationHandler) CreateToken(id string, issuer string) (string, error) {
+	secretKey := []byte(os.Getenv("JWT_SECRET"))
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": id,
+		"iss": issuer,
+		"iat": time.Now().Unix(),
+		"exp": time.Now().Add(2 * time.Hour).Unix(),
+	})
 
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
-		return "", fmt.Errorf("failed to stringfy token")
+		return "", fmt.Errorf("failed to stringify token: %w", err)
 	}
 
 	return tokenString, nil

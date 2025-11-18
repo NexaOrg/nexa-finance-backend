@@ -25,6 +25,7 @@ func SetupRoutes(db *pgx.Conn) {
 	})
 
 	app.Post("/user", userHandler.RegisterUser)
+	app.Post("/auth/login", userHandler.LoginUser)
 
 	log.Printf("Servidor rodando na porta %s", port)
 	log.Fatal(app.Listen(":" + port))
