@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autenticação de Usuário</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0D1928 0%, #213B4D 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 48px 40px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: #F39F03;
+            border-radius: 12px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+        }
+
+        h1 {
+            color: #0D1928;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .description {
+            color: #213B4D;
+            font-size: 15px;
+            line-height: 1.6;
+            opacity: 0.8;
+        }
+
+        .code-section {
+            margin: 40px 0;
+        }
+
+        .code-label {
+            color: #0D1928;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .code-inputs {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .code-input {
+            width: 64px;
+            height: 64px;
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.3s ease;
+            color: #0D1928;
+            background: #fafafa;
+        }
+
+        .code-input:focus {
+            border-color: #F39F03;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(243, 159, 3, 0.1);
+        }
+
+        .code-input.filled {
+            border-color: #F39F03;
+            background: #fff9f0;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: #F39F03;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .submit-btn.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .submit-btn.active:hover {
+            background: #d88f02;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(243, 159, 3, 0.3);
+        }
+
+        .submit-btn.active:active {
+            transform: translateY(0);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .footer-text {
+            color: #213B4D;
+            font-size: 13px;
+            opacity: 0.7;
+            line-height: 1.6;
+        }
+
+        .resend-link {
+            color: #F39F03;
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 12px;
+            display: inline-block;
+        }
+
+        .resend-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 32px 24px;
+            }
+
+            .code-input {
+                width: 56px;
+                height: 56px;
+                font-size: 24px;
+            }
+
+            .code-inputs {
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔐</div>
+            <h1>Confirme seu Email</h1>
+            <p class="description">
+                Enviamos um código de verificação de 4 dígitos para seu email. 
+                Digite o código abaixo para confirmar seu cadastro.
+            </p>
+        </div>
+
+        <div class="code-section">
+            <div class="code-label">Digite o código de verificação</div>
+            <div class="code-inputs">
+                <input type="text" class="code-input" maxlength="1" id="input1" autocomplete="off">
+                <input type="text" class="code-input" maxlength="1" id="input2" autocomplete="off">
+                <input type="text" class="code-input" maxlength="1" id="input3" autocomplete="off">
+                <input type="text" class="code-input" maxlength="1" id="input4" autocomplete="off">
+            </div>
+            <button class="submit-btn" id="submitBtn">Verificar Código</button>
+        </div>
+
+        <div class="footer">
+            <p class="footer-text">
+                Não recebeu o código?
+            </p>
+            <a href="#" class="resend-link" id="resendLink">Reenviar código</a>
+        </div>
+    </div>
+
+    <script>
+        const inputs = document.querySelectorAll('.code-input');
+        const submitBtn = document.getElementById('submitBtn');
+        const resendLink = document.getElementById('resendLink');
+
+        // Auto-focus no primeiro input
+        inputs[0].focus();
+
+        // Função para verificar se todos os inputs estão preenchidos
+        function checkAllFilled() {
+            const allFilled = Array.from(inputs).every(input => input.value !== '');
+            if (allFilled) {
+                submitBtn.classList.add('active');
+            } else {
+                submitBtn.classList.remove('active');
+            }
+        }
+
+        // Adicionar eventos em cada input
+        inputs.forEach((input, index) => {
+            // Permitir apenas números
+            input.addEventListener('input', (e) => {
+                const value = e.target.value;
+                
+                // Aceita apenas números
+                if (!/^\d*$/.test(value)) {
+                    e.target.value = '';
+                    return;
+                }
+
+                // Adiciona classe quando preenchido
+                if (value !== '') {
+                    e.target.classList.add('filled');
+                } else {
+                    e.target.classList.remove('filled');
+                }
+
+                // Move para o próximo input automaticamente
+                if (value !== '' && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+
+                checkAllFilled();
+            });
+
+            // Navegar com backspace
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && input.value === '' && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+
+            // Colar código completo
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedData = e.clipboardData.getData('text').slice(0, 4);
+                
+                if (/^\d+$/.test(pastedData)) {
+                    pastedData.split('').forEach((char, i) => {
+                        if (inputs[i]) {
+                            inputs[i].value = char;
+                            inputs[i].classList.add('filled');
+                        }
+                    });
+                    
+                    const lastFilledIndex = Math.min(pastedData.length - 1, 3);
+                    inputs[lastFilledIndex].focus();
+                    checkAllFilled();
+                }
+            });
+        });
+
+        // Botão de envio
+        submitBtn.addEventListener('click', () => {
+            if (submitBtn.classList.contains('active')) {
+                const code = Array.from(inputs).map(input => input.value).join('');
+                console.log('Código enviado:', code);
+                alert(`Código ${code} verificado com sucesso!`);
+                
+                // Aqui você adicionaria a lógica de envio para seu backend
+                // fetch('/api/verify', { method: 'POST', body: JSON.stringify({ code }) })
+            }
+        });
+
+        // Reenviar código
+        resendLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('Novo código enviado para seu email!');
+            
+            // Limpar inputs
+            inputs.forEach(input => {
+                input.value = '';
+                input.classList.remove('filled');
+            });
+            inputs[0].focus();
+            checkAllFilled();
+        });
+    </script>
+</body>
+</html>
