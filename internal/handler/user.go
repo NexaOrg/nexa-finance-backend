@@ -22,11 +22,9 @@ import (
 	"time"
 
 	"github.com/dlclark/regexp2"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UserHandler struct {
@@ -39,45 +37,45 @@ func NewUserHandler(db *pgx.Conn) *UserHandler {
 	return &UserHandler{
 		UserRepository:            repository.NewUserRepository(db),
 		UserFactory:               factory.NewUserFactory(),
-		UserAuthenticationHandler: NewUserAuthenticationHandler(nil, nil), //argumentos nulos provisorios enquanto logica de email nao implementada
+		UserAuthenticationHandler: NewUserAuthenticationHandler(db, nil),
 	}
 }
 
 func (u *UserHandler) RegisterUser(c *fiber.Ctx) error {
-	var model model.User
+	var modelUser model.User
 
-	if err := c.BodyParser(&model); err != nil {
+	if err := c.BodyParser(&modelUser); err != nil {
 		return c.Status(400).JSON(utils.EncodeRequestError(c, "INVALID_BODY_FORMAT"))
 	}
 
-	if len(model.Name) > 20 {
+	if len(modelUser.Name) > 20 {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid name", "message": "O nome não deve conter mais de 20 caracteres"})
 	}
 
 	passwordRegex := regexp2.MustCompile(`^(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%\^&\*\(\)_\+\-=\[\]{};':"\\|,.<>\/?]).{6,}$`, 0)
-	match, _ := passwordRegex.MatchString(model.Password)
+	match, _ := passwordRegex.MatchString(modelUser.Password)
 
 	if !match {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid password", "message": "A senha deve possuir no mínimo 6 caracteres, contendo uma letra maiúscula, um número e um caractere especial"})
 	}
 
 	emailRegex := regexp2.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`, 0)
-	match, _ = emailRegex.MatchString(model.Email)
+	match, _ = emailRegex.MatchString(modelUser.Email)
 
 	if !match {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid email", "message": "O email inserido não é válido"})
 	}
 
-	model.LastLogin = time.Now()
+	modelUser.LastLogin = time.Now()
 
-	hash, err := security.EncryptPassword(model.Password)
+	hash, err := security.EncryptPassword(modelUser.Password)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Internal Server Error", "error": err.Error()})
 	}
 
-	model.Password = string(hash)
+	modelUser.Password = string(hash)
 
-	err = u.UserRepository.InsertUser(&model)
+	err = u.UserRepository.InsertUser(&modelUser)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Internal Server Error", "error": err.Error()})
 	}
@@ -86,37 +84,10 @@ func (u *UserHandler) RegisterUser(c *fiber.Ctx) error {
 }
 
 func (u *UserHandler) validateUser(user *model.User) (bool, error) {
-	// if user.Name == "" || user.Email == "" || user.Password == "" {
-	// 	return false, fmt.Errorf("todos os campos são obrigatórios")
-	// }
-
-	// if _, err := u.validateName(user.Name); err != nil {
-	// 	return false, err
-	// }
-
-	// _, _, err := u.validateEmail(user.Email)
 	return false, nil
 }
 
-func (u *UserHandler) validateEmail(email string) (*primitive.ObjectID, string, error) {
-	// if !utils.IsEmailValid(email) {
-	// 	return nil, "INVALID_EMAIL", fmt.Errorf("formato de e-mail inválido")
-	// }
-
-	// user, err := u.UserRepository.FindByFilter("email", email)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return nil, "INTERNAL_SERVER_ERROR", fmt.Errorf("erro ao acessar o banco de dados")
-	// }
-
-	// if user == nil {
-	// 	return nil, "", nil
-	// }
-
-	// if user.IsActive {
-	// 	return nil, "USER_ALREADY_REGISTERED", fmt.Errorf("e-mail já registrado")
-	// }
-
+func (u *UserHandler) validateEmail(email string) (*string, string, error) {
 	return nil, "", nil
 }
 
@@ -211,16 +182,10 @@ func (u *UserHandler) validateLoginCredentials(user *model.User, password string
 	if err := security.VerifyPasswordMatch(password, user.Password); err != nil {
 		return errors.New("invalid login credentials")
 	}
-
 	return nil
 }
 
 func (u UserHandler) verifyUserActive(user *model.User, c *fiber.Ctx) bool {
-	// if !user.IsActive {
-	// 	_ = u.handleLoginError(c, "USER_NOT_ACTIVE")
-	// 	return false
-	// }
-
 	return true
 }
 
@@ -228,7 +193,6 @@ func (u UserHandler) handleLoginError(c *fiber.Ctx, errMsg string) error {
 	if err := utils.EncodeRequestError(c, errMsg, "/login"); err != nil {
 		return fmt.Errorf("failed to encode request error: %s", err)
 	}
-
 	return nil
 }
 
@@ -236,7 +200,7 @@ func (u *UserHandler) EditUser(c *fiber.Ctx) error {
 	var body map[string]interface{}
 
 	if err := c.BodyParser(&body); err != nil {
-		return fmt.Errorf("failed to parse body: %w", err)
+		return fiber.NewError(fiber.StatusBadRequest, "failed to parse body")
 	}
 
 	idRaw, ok := body["idUser"]
@@ -244,19 +208,15 @@ func (u *UserHandler) EditUser(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "idUser é obrigatório")
 	}
 
-	idStr, ok := idRaw.(string)
-	if !ok {
-		return fiber.NewError(fiber.StatusBadRequest, "idUser deve ser uma string")
-	}
-	userID, err := primitive.ObjectIDFromHex(idStr)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "idUser inválido")
+	userID, ok := idRaw.(string)
+	if !ok || userID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "idUser deve ser uma string válida")
 	}
 
 	delete(body, "idUser")
 
 	if err := u.UserRepository.UpdateByID(userID, body); err != nil {
-		return fmt.Errorf("falha ao atualizar usuário: %w", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "falha ao atualizar usuário")
 	}
 
 	return c.SendStatus(fiber.StatusOK)
@@ -278,15 +238,14 @@ func (h *UserHandler) UploadUserImage(c *fiber.Ctx) error {
 		})
 	}
 
-	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	user, err := h.UserRepository.FindByFilter("id", userIDStr)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid user id format",
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to fetch user",
 		})
 	}
 
-	user, err := h.UserRepository.FindByFilter("_id", userID)
-	if err == nil && user.PhotoUrl != "" {
+	if user != nil && user.PhotoUrl != "" {
 		publicID := utils.ExtractPublicID(user.PhotoUrl)
 		if publicID != "" {
 			if err := deleteCloudinaryImage(publicID); err != nil {
@@ -331,8 +290,8 @@ func (h *UserHandler) UploadUserImage(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.UserRepository.UpdateByID(userID, map[string]interface{}{
-		"photoUrl": photoURL,
+	err = h.UserRepository.UpdateByID(userIDStr, map[string]interface{}{
+		"photo_url": photoURL,
 	})
 	if err != nil {
 		log.Printf("Erro ao atualizar usuário: %v", err)
@@ -401,16 +360,9 @@ func (h *UserHandler) UploadUserBanner(c *fiber.Ctx) error {
 		})
 	}
 
-	userID, err := primitive.ObjectIDFromHex(userIDStr)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid user id format",
-		})
-	}
-
 	path := c.FormValue("path")
 	if path != "" {
-		err = h.UserRepository.UpdateByID(userID, map[string]interface{}{
+		err := h.UserRepository.UpdateByID(userIDStr, map[string]interface{}{
 			"banner": path,
 		})
 		if err != nil {
@@ -429,14 +381,6 @@ func (h *UserHandler) UploadUserBanner(c *fiber.Ctx) error {
 			"error": "no banner image provided",
 		})
 	}
-
-	// user, err := h.UserRepository.FindByFilter("_id", userID)
-	// if err == nil && user.Banner != "" {
-	// 	publicID := utils.ExtractPublicID(user.Banner)
-	// 	if publicID != "" {
-	// 		_ = deleteCloudinaryImage(publicID)
-	// 	}
-	// }
 
 	file, err := fileHeader.Open()
 	if err != nil {
@@ -469,7 +413,9 @@ func (h *UserHandler) UploadUserBanner(c *fiber.Ctx) error {
 
 	_, err = io.Copy(part, file)
 	if err != nil {
-		return err
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "error copying banner file",
+		})
 	}
 	writer.Close()
 
@@ -504,7 +450,7 @@ func (h *UserHandler) UploadUserBanner(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.UserRepository.UpdateByID(userID, map[string]interface{}{
+	err = h.UserRepository.UpdateByID(userIDStr, map[string]interface{}{
 		"banner": cloudResp.SecureURL,
 	})
 	if err != nil {
