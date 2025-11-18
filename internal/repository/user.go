@@ -75,6 +75,14 @@ func (u *UserRepository) UpdateByID(id string, updateData map[string]interface{}
 		return fmt.Errorf("update data is empty")
 	}
 
+	user, err := u.FindByFilter("id", id)
+	if err != nil {
+		return fmt.Errorf("failed to verify user before update: %w", err)
+	}
+	if user == nil {
+		return fmt.Errorf("user not found")
+	}
+
 	setClauses := []string{}
 	values := []interface{}{}
 	i := 1
@@ -93,7 +101,7 @@ func (u *UserRepository) UpdateByID(id string, updateData map[string]interface{}
 		i,
 	)
 
-	_, err := u.db.Exec(context.Background(), query, values...)
+	_, err = u.db.Exec(context.Background(), query, values...)
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
 	}
