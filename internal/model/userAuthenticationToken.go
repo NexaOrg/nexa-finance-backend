@@ -1,17 +1,13 @@
 package model
 
-import (
-	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
-)
+import "time"
 
 type UserAuthenticationToken struct {
-	ID        primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
-	UserID    primitive.ObjectID `json:"userID" bson:"userID"`
-	Code      string             `json:"code" bson:"code"`
-	ExpiresAt time.Time          `json:"expiresAt" bson:"expiresAt"`
-	Fails     int                `json:"fails" bson:"fails"`
+	ID        string    `json:"id,omitempty"`
+	UserID    string    `json:"userID"`
+	Code      string    `json:"code"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Fails     int       `json:"fails"`
 }
 
 func (t *UserAuthenticationToken) HasExpired() bool {
