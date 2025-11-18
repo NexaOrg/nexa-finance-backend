@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"nexa/internal/model"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UserRepository struct {
@@ -70,19 +70,33 @@ func (u *UserRepository) FindByFilter(key string, value any) (*model.User, error
 	return &user, nil
 }
 
-func (u *UserRepository) UpdateByID(id primitive.ObjectID, updateData map[string]interface{}) error {
-	// ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
-	// defer cancel()
+func (u *UserRepository) UpdateByID(id string, updateData map[string]interface{}) error {
+	if len(updateData) == 0 {
+		return fmt.Errorf("update data is empty")
+	}
 
-	// filter := bson.M{"_id": id}
+	setClauses := []string{}
+	values := []interface{}{}
+	i := 1
 
-	// res := u.collection.FindOneAndUpdate(
-	// 	ctx,
-	// 	filter,
-	// 	bson.D{{Key: "$set", Value: updateData}},
-	// )
+	for column, value := range updateData {
+		setClauses = append(setClauses, fmt.Sprintf("%s = $%d", column, i))
+		values = append(values, value)
+		i++
+	}
 
-	// return res.Err()
+	values = append(values, id)
 
-	return fmt.Errorf("")
+	query := fmt.Sprintf(
+		"UPDATE db_nexa.tb_user SET %s WHERE id = $%d",
+		strings.Join(setClauses, ", "),
+		i,
+	)
+
+	_, err := u.db.Exec(context.Background(), query, values...)
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return nil
 }

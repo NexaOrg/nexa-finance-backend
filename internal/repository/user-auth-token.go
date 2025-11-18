@@ -6,87 +6,93 @@ import (
 	"nexa/internal/model"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/jackc/pgx/v5"
 )
 
 type UserAuthenticationTokenRepository struct {
-	collection *mongo.Collection
+	db     *pgx.Conn
+	schema string
+	table  string
 }
 
-func NewUserAuthenticationTokenRepository(client *mongo.Client, dbName, collectionName string) *UserAuthenticationTokenRepository {
+func NewUserAuthenticationTokenRepository(db *pgx.Conn, schema, table string) *UserAuthenticationTokenRepository {
 	return &UserAuthenticationTokenRepository{
-		collection: client.Database(dbName).Collection(collectionName),
+		db:     db,
+		schema: schema,
+		table:  table,
 	}
 }
 
-func (ua *UserAuthenticationTokenRepository) FindTokenByUserID(userID primitive.ObjectID) (*model.UserAuthenticationToken, error) {
-	var userAuthenticationToken model.UserAuthenticationToken
+func (r *UserAuthenticationTokenRepository) tableFQN() string {
+	return fmt.Sprintf("%s.%s", r.schema, r.table)
+}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+func (r *UserAuthenticationTokenRepository) FindTokenByUserID(userID string) (*model.UserAuthenticationToken, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	filter := bson.M{"userID": userID}
+	query := fmt.Sprintf("SELECT id, user_id, code, expires_at, fails FROM %s WHERE user_id = $1 LIMIT 1", r.tableFQN())
 
-	result := ua.collection.FindOne(ctx, filter)
-
-	if err := result.Err(); err != nil {
-		if err == mongo.ErrNoDocuments {
+	var token model.UserAuthenticationToken
+	err := r.db.QueryRow(ctx, query, userID).Scan(&token.ID, &token.UserID, &token.Code, &token.ExpiresAt, &token.Fails)
+	if err != nil {
+		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
-
-		return nil, fmt.Errorf("failed to get: %w", err)
+		return nil, fmt.Errorf("failed to get token by user_id: %w", err)
 	}
 
-	if err := result.Decode(&userAuthenticationToken); err != nil {
-		return nil, fmt.Errorf("failed to decode: %w", err)
-	}
-
-	return &userAuthenticationToken, nil
+	return &token, nil
 }
 
-func (ua *UserAuthenticationTokenRepository) IncrementFails(id primitive.ObjectID) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+func (r *UserAuthenticationTokenRepository) Insert(token *model.UserAuthenticationToken) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	filter := bson.M{"_id": id}
-	update := bson.M{"$inc": bson.M{"fails": 1}}
+	// Inserimos os campos e retornamos o id gerado
+	query := fmt.Sprintf("INSERT INTO %s (user_id, code, expires_at, fails) VALUES ($1, $2, $3, $4) RETURNING id", r.tableFQN())
 
-	result := ua.collection.FindOneAndUpdate(ctx, filter, update)
-	if result.Err() != nil {
-		return fmt.Errorf("failed to increment authentication fail: %s", result.Err())
+	var id string
+	err := r.db.QueryRow(ctx, query, token.UserID, token.Code, token.ExpiresAt, token.Fails).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("failed to insert token: %w", err)
+	}
+
+	return id, nil
+}
+
+func (r *UserAuthenticationTokenRepository) IncrementFails(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := fmt.Sprintf("UPDATE %s SET fails = fails + 1 WHERE id = $1", r.tableFQN())
+
+	ct, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to increment fails: %w", err)
+	}
+
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("no token found to increment fails for id %s", id)
 	}
 
 	return nil
 }
 
-func (ua *UserAuthenticationTokenRepository) Delete(id primitive.ObjectID) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+func (r *UserAuthenticationTokenRepository) Delete(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	filter := bson.M{"_id": id}
+	query := fmt.Sprintf("DELETE FROM %s WHERE id = $1", r.tableFQN())
 
-	result, err := ua.collection.DeleteOne(ctx, filter)
+	ct, err := r.db.Exec(ctx, query, id)
 	if err != nil {
-		return fmt.Errorf("failed to delete: %s", err)
+		return fmt.Errorf("failed to delete token: %w", err)
 	}
 
-	if result.DeletedCount == 0 {
-		return fmt.Errorf("no validation found with ID %s", id.Hex())
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("no token found with id %s", id)
 	}
 
 	return nil
-}
-
-func (ua *UserAuthenticationTokenRepository) Insert(UserAuthenticationToken *model.UserAuthenticationToken) (primitive.ObjectID, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
-	defer cancel()
-
-	result, err := ua.collection.InsertOne(ctx, UserAuthenticationToken)
-	if err != nil {
-		return primitive.NilObjectID, fmt.Errorf("failed to insert: %w", err)
-	}
-
-	return result.InsertedID.(primitive.ObjectID), nil
 }
