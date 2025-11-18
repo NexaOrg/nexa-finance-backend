@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Autenticação de Usuário</title>
+    <title>Código de Verificação</title>
     <style>
         * {
             margin: 0;
@@ -13,287 +13,263 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #0D1928 0%, #213B4D 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            background: #f5f5f5;
+            padding: 40px 20px;
         }
 
-        .container {
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
             background: white;
             border-radius: 16px;
-            padding: 48px 40px;
-            max-width: 480px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
 
         .header {
+            background: linear-gradient(135deg, #0D1928 0%, #213B4D 100%);
+            padding: 48px 40px;
             text-align: center;
-            margin-bottom: 32px;
         }
 
         .logo {
-            width: 60px;
-            height: 60px;
-            background: #0D1928;
-            border-radius: 12px;
-            margin: 0 auto 20px;
+            width: 70px;
+            height: 70px;
+            background: #F39F03;
+            border-radius: 14px;
+            margin: 0 auto 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            font-weight: bold;
-            color: white;
+            font-size: 32px;
         }
 
-        h1 {
-            color: #0D1928;
-            font-size: 24px;
+        .header h1 {
+            color: white;
+            font-size: 28px;
             font-weight: 600;
             margin-bottom: 12px;
         }
 
-        .description {
-            color: #213B4D;
-            font-size: 15px;
-            line-height: 1.6;
-            opacity: 0.8;
+        .header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+            line-height: 1.5;
         }
 
-        .code-section {
-            margin: 40px 0;
+        .content {
+            padding: 48px 40px;
         }
 
-        .code-label {
+        .greeting {
             color: #0D1928;
-            font-size: 14px;
+            font-size: 18px;
             font-weight: 500;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-
-        .code-inputs {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
             margin-bottom: 24px;
         }
 
-        .code-input {
-            width: 64px;
-            height: 64px;
-            font-size: 28px;
-            font-weight: 600;
-            text-align: center;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            outline: none;
-            transition: all 0.3s ease;
-            color: #0D1928;
+        .message {
+            color: #213B4D;
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        .code-section {
             background: #fafafa;
+            border: 2px solid #e0e0e0;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 32px;
         }
 
-        .code-input:focus {
-            border-color: #F39F03;
+        .code-label {
+            color: #213B4D;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .code-display {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .code-digit {
+            width: 68px;
+            height: 68px;
             background: white;
-            box-shadow: 0 0 0 4px rgba(243, 159, 3, 0.1);
+            border: 3px solid #F39F03;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: #0D1928;
+            box-shadow: 0 4px 12px rgba(243, 159, 3, 0.15);
         }
 
-        .code-input.filled {
-            border-color: #F39F03;
+        .code-info {
+            color: #213B4D;
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        .warning-box {
             background: #fff9f0;
+            border-left: 4px solid #F39F03;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 32px;
         }
 
-        .submit-btn {
-            width: 100%;
-            padding: 16px;
+        .warning-box p {
+            color: #213B4D;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .warning-box strong {
+            color: #0D1928;
+        }
+
+        .cta-button {
+            display: inline-block;
             background: #F39F03;
             color: white;
-            border: none;
+            text-decoration: none;
+            padding: 16px 40px;
             border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
-            cursor: pointer;
+            text-align: center;
             transition: all 0.3s ease;
-            opacity: 0.5;
-            pointer-events: none;
         }
 
-        .submit-btn.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .submit-btn.active:hover {
+        .cta-button:hover {
             background: #d88f02;
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(243, 159, 3, 0.3);
         }
 
-        .submit-btn.active:active {
-            transform: translateY(0);
+        .button-container {
+            text-align: center;
+            margin-bottom: 32px;
         }
 
         .footer {
-            text-align: center;
-            margin-top: 32px;
-            padding-top: 24px;
             border-top: 1px solid #e0e0e0;
+            padding-top: 32px;
         }
 
         .footer-text {
             color: #213B4D;
             font-size: 13px;
-            opacity: 0.7;
             line-height: 1.6;
+            opacity: 0.7;
+            margin-bottom: 16px;
         }
 
-        .resend-link {
-            color: #F39F03;
-            text-decoration: none;
-            font-weight: 500;
-            margin-top: 12px;
-            display: inline-block;
+        .help-text {
+            color: #213B4D;
+            font-size: 13px;
+            text-align: center;
+            opacity: 0.6;
+            margin-top: 24px;
         }
 
-        .resend-link:hover {
-            text-decoration: underline;
+        .email-footer {
+            background: #0D1928;
+            padding: 32px 40px;
+            text-align: center;
         }
 
-        @media (max-width: 480px) {
-            .container {
+        .email-footer p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        @media (max-width: 600px) {
+            .header, .content, .email-footer {
                 padding: 32px 24px;
             }
 
-            .code-input {
+            .code-digit {
                 width: 56px;
                 height: 56px;
-                font-size: 24px;
+                font-size: 26px;
             }
 
-            .code-inputs {
+            .code-display {
                 gap: 8px;
+            }
+
+            .code-section {
+                padding: 32px 20px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="email-container">
         <div class="header">
-            <div class="logo"><img src="../assets/icon/Logo.svg" alt="Logo"></div>
-            <h1>Confirme seu Email</h1>
-            <p class="description">
-                Enviamos um código de verificação de 4 dígitos para seu email. 
-                Digite o código abaixo para confirmar seu cadastro.
-            </p>
+            <div class="logo">🔐</div>
+            <h1>Código de Verificação</h1>
+            <p>Confirme seu cadastro para continuar</p>
         </div>
 
-        <div class="code-section">
-            <div class="code-label">Digite o código de verificação</div>
-            <div class="code-inputs">
-                <input type="text" class="code-input" maxlength="1" id="input1" autocomplete="off">
-                <input type="text" class="code-input" maxlength="1" id="input2" autocomplete="off">
-                <input type="text" class="code-input" maxlength="1" id="input3" autocomplete="off">
-                <input type="text" class="code-input" maxlength="1" id="input4" autocomplete="off">
+        <div class="content">
+            <div class="greeting">Olá!</div>
+            
+            <div class="message">
+                Recebemos sua solicitação de cadastro. Para garantir a segurança da sua conta, 
+                precisamos verificar seu endereço de email.
             </div>
-            <button class="submit-btn" id="submitBtn">Verificar Código</button>
+
+            <div class="code-section">
+                <div class="code-label">Seu Código de Verificação</div>
+                <div class="code-display">
+                    <div class="code-digit">3</div>
+                    <div class="code-digit">7</div>
+                    <div class="code-digit">8</div>
+                    <div class="code-digit">5</div>
+                </div>
+                <div class="code-info">Este código expira em 15 minutos</div>
+            </div>
+
+            <div class="warning-box">
+                <p>
+                    <strong>⚠️ Importante:</strong> Digite este código na tela de autenticação 
+                    para completar seu cadastro. Nunca compartilhe este código com ninguém.
+                </p>
+            </div>
+
+            <div class="footer">
+                <div class="footer-text">
+                    Se você não solicitou este código, pode ignorar este email com segurança. 
+                    Sua conta permanecerá protegida.
+                </div>
+                <div class="help-text">
+                    Precisa de ajuda? Entre em contato com nosso suporte.
+                </div>
+            </div>
         </div>
 
-        <div class="footer">
-            <p class="footer-text">
-                Não recebeu o código?
+        <div class="email-footer">
+            <p>
+                Este é um email automático, por favor não responda.<br>
+                © 2025 Sua Empresa. Todos os direitos reservados.
             </p>
-            <a href="#" class="resend-link" id="resendLink">Reenviar código</a>
         </div>
     </div>
-
-    <script>
-        const inputs = document.querySelectorAll('.code-input');
-        const submitBtn = document.getElementById('submitBtn');
-        const resendLink = document.getElementById('resendLink');
-
-        inputs[0].focus();
-
-        function checkAllFilled() {
-            const allFilled = Array.from(inputs).every(input => input.value !== '');
-            if (allFilled) {
-                submitBtn.classList.add('active');
-            } else {
-                submitBtn.classList.remove('active');
-            }
-        }
-
-        inputs.forEach((input, index) => {
-            input.addEventListener('input', (e) => {
-                const value = e.target.value;
-                
-                if (!/^\d*$/.test(value)) {
-                    e.target.value = '';
-                    return;
-                }
-
-                if (value !== '') {
-                    e.target.classList.add('filled');
-                } else {
-                    e.target.classList.remove('filled');
-                }
-
-                if (value !== '' && index < inputs.length - 1) {
-                    inputs[index + 1].focus();
-                }
-
-                checkAllFilled();
-            });
-
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && input.value === '' && index > 0) {
-                    inputs[index - 1].focus();
-                }
-            });
-
-            input.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const pastedData = e.clipboardData.getData('text').slice(0, 4);
-                
-                if (/^\d+$/.test(pastedData)) {
-                    pastedData.split('').forEach((char, i) => {
-                        if (inputs[i]) {
-                            inputs[i].value = char;
-                            inputs[i].classList.add('filled');
-                        }
-                    });
-                    
-                    const lastFilledIndex = Math.min(pastedData.length - 1, 3);
-                    inputs[lastFilledIndex].focus();
-                    checkAllFilled();
-                }
-            });
-        });
-
-        submitBtn.addEventListener('click', () => {
-            if (submitBtn.classList.contains('active')) {
-                const code = Array.from(inputs).map(input => input.value).join('');
-                console.log('Código enviado:', code);
-                alert(`Código ${code} verificado com sucesso!`);
-                
-                //adicionar axios aqui
-            }
-        });
-
-        resendLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            alert('Novo código enviado para seu email!');
-            
-            inputs.forEach(input => {
-                input.value = '';
-                input.classList.remove('filled');
-            });
-            inputs[0].focus();
-            checkAllFilled();
-        });
-    </script>
 </body>
 </html>
