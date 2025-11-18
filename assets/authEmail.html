@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Código de Verificação</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 40px 20px;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0D1928 0%, #213B4D 100%);
+            padding: 48px 40px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 70px;
+            height: 70px;
+            background: #0D1928;
+            border-radius: 14px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .content {
+            padding: 48px 40px;
+        }
+
+        .greeting {
+            color: #0D1928;
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+
+        .message {
+            color: #213B4D;
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        .code-section {
+            background: #fafafa;
+            border: 2px solid #e0e0e0;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .code-label {
+            color: #213B4D;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .code-display {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .code-digit {
+            width: 68px;
+            height: 68px;
+            background: white;
+            border: 3px solid #F39F03;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: #0D1928;
+            box-shadow: 0 4px 12px rgba(243, 159, 3, 0.15);
+        }
+
+        .code-info {
+            color: #213B4D;
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        .warning-box {
+            background: #fff9f0;
+            border-left: 4px solid #F39F03;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 32px;
+        }
+
+        .warning-box p {
+            color: #213B4D;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .warning-box strong {
+            color: #0D1928;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: #F39F03;
+            color: white;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            background: #d88f02;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(243, 159, 3, 0.3);
+        }
+
+        .button-container {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .footer {
+            border-top: 1px solid #e0e0e0;
+            padding-top: 32px;
+        }
+
+        .footer-text {
+            color: #213B4D;
+            font-size: 13px;
+            line-height: 1.6;
+            opacity: 0.7;
+            margin-bottom: 16px;
+        }
+
+        .help-text {
+            color: #213B4D;
+            font-size: 13px;
+            text-align: center;
+            opacity: 0.6;
+            margin-top: 24px;
+        }
+
+        .email-footer {
+            background: #0D1928;
+            padding: 32px 40px;
+            text-align: center;
+        }
+
+        .email-footer p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        @media (max-width: 600px) {
+            .header, .content, .email-footer {
+                padding: 32px 24px;
+            }
+
+            .code-digit {
+                width: 56px;
+                height: 56px;
+                font-size: 26px;
+            }
+
+            .code-display {
+                gap: 8px;
+            }
+
+            .code-section {
+                padding: 32px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="logo"><img src="./icon/Logo.svg" alt="logo"></div>
+            <h1>Código de Verificação</h1>
+            <p>Confirme seu cadastro para continuar</p>
+        </div>
+
+        <div class="content">
+            <div class="greeting">Olá!</div>
+            
+            <div class="message">
+                Recebemos sua solicitação de cadastro. Para garantir a segurança da sua conta, 
+                precisamos verificar seu endereço de email.
+            </div>
+
+            <div class="code-section">
+                <div class="code-label">Seu Código de Verificação</div>
+                <div class="code-display">
+                    <div class="code-digit">3</div>
+                    <div class="code-digit">7</div>
+                    <div class="code-digit">8</div>
+                    <div class="code-digit">5</div>
+                </div>
+                <div class="code-info">Este código expira em 15 minutos</div>
+            </div>
+
+            <div class="warning-box">
+                <p>
+                    <strong>⚠️ Importante:</strong> Digite este código na tela de autenticação 
+                    para completar seu cadastro. Nunca compartilhe este código com ninguém.
+                </p>
+            </div>
+
+            <div class="footer">
+                <div class="footer-text">
+                    Se você não solicitou este código, pode ignorar este email com segurança. 
+                    Sua conta permanecerá protegida.
+                </div>
+                <div class="help-text">
+                    Precisa de ajuda? Entre em contato com nosso suporte.
+                </div>
+            </div>
+        </div>
+
+        <div class="email-footer">
+            <p>
+                Este é um email automático, por favor não responda.<br>
+                © 2025 Sua Empresa. Todos os direitos reservados.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
