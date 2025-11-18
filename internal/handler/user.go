@@ -160,7 +160,38 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 		})
 	}
 
-	token, err := u.UserAuthenticationHandler.CreateToken(dbUser.ID, "/auth/login")
+	existing, err := u.UserAuthenticationHandler.UserAuthenticationTokenRepo.FindTokenByUserID(dbUser.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "INTERNAL_SERVER_ERROR",
+			"message": "Falha ao buscar token existente",
+		})
+	}
+
+	if existing != nil {
+		_ = u.UserAuthenticationHandler.UserAuthenticationTokenRepo.Delete(existing.ID)
+	}
+
+	code, err := utils.GenerateCode(6)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "INTERNAL_SERVER_ERROR",
+			"message": "Falha ao gerar código de autenticação",
+		})
+	}
+
+	tokenData := u.UserAuthenticationHandler.UserAuthenticationTokenBuilder.CreateUserAuthenticationToken(dbUser.ID, code, 1440)
+
+	tokenID, err := u.UserAuthenticationHandler.UserAuthenticationTokenRepo.Insert(tokenData)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "INTERNAL_SERVER_ERROR",
+			"message": "Falha ao armazenar token no banco",
+		})
+	}
+	tokenData.ID = tokenID
+
+	jwtToken, err := u.UserAuthenticationHandler.CreateToken(dbUser.ID, "/auth/login")
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create JWT token")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -170,11 +201,13 @@ func (u *UserHandler) LoginUser(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":  fiber.StatusOK,
-		"message": "Login realizado com sucesso!",
-		"token":   token,
-		"idUser":  dbUser.ID,
-		"name":    dbUser.Name,
+		"status":      fiber.StatusOK,
+		"message":     "Login realizado com sucesso!",
+		"token":       jwtToken,
+		"authTokenID": tokenData.ID,
+		"authCode":    tokenData.Code,
+		"idUser":      dbUser.ID,
+		"name":        dbUser.Name,
 	})
 }
 
