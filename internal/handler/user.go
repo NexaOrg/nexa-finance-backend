@@ -102,7 +102,7 @@ func (u *UserHandler) RegisterUser(c *fiber.Ctx) error {
 		})
 	}
 
-	templateBytes, err := os.ReadFile("templates/email_verification.html")
+	templateBytes, err := os.ReadFile("authEmail.html")
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"message": "Internal Server Error",
