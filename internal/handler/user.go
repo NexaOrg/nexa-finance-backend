@@ -83,14 +83,6 @@ func (u *UserHandler) RegisterUser(c *fiber.Ctx) error {
 	return c.Status(201).JSON(fiber.Map{"message": "User creation successful"})
 }
 
-func (u *UserHandler) validateUser(user *model.User) (bool, error) {
-	return false, nil
-}
-
-func (u *UserHandler) validateEmail(email string) (*string, string, error) {
-	return nil, "", nil
-}
-
 func (u *UserHandler) ValidateName(name string) (string, error) {
 	const MaxLength = 200
 	if name == "" {
