@@ -62,4 +62,44 @@ func (r *CategoryRepository) FindByFilter(key string, value any) (*model.Categor
 	}
 
 	return &category, nil
+
+	func (r *CategoryRepository) UpdateByID(id string, updateData map[string]interface{}) error {
+	if len(updateData) == 0 {
+		return fmt.Errorf("update data is empty")
+	}
+
+	// Verifica se a categoria existe antes de atualizar
+	category, err := r.FindByFilter("id", id)
+	if err != nil {
+		return fmt.Errorf("failed to verify category before update: %w", err)
+	}
+	if category == nil {
+		return fmt.Errorf("category not found")
+	}
+
+	setClauses := []string{}
+	values := []interface{}{}
+	i := 1
+
+	for column, value := range updateData {
+		setClauses = append(setClauses, fmt.Sprintf("%s = $%d", column, i))
+		values = append(values, value)
+		i++
+	}
+
+	values = append(values, id)
+
+	query := fmt.Sprintf(
+		"UPDATE db_nexa.tb_category SET %s WHERE id = $%d",
+		strings.Join(setClauses, ", "),
+		i,
+	)
+
+	_, err = r.db.Exec(context.Background(), query, values...)
+	if err != nil {
+		return fmt.Errorf("failed to update category: %w", err)
+	}
+
+	return nil
+}
 }
