@@ -27,6 +27,12 @@ func SetupRoutes(db *pgx.Conn) {
 	app.Post("/user", userHandler.RegisterUser)
 	app.Post("/auth/login", userHandler.LoginUser)
 
+	categoryHandler := factory.buildCategoryHandler(db)
+	r.route("/category", func (r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Post("/", categoryHandler.CreateCategory)
+	})
+
 	log.Printf("Servidor rodando na porta %s", port)
 	log.Fatal(app.Listen(":" + port))
 }
