@@ -49,28 +49,21 @@ func (u *UserHandler) RegisterUser(c *fiber.Ctx) error {
 	}
 
 	if len(modelUser.Name) > 20 {
-		return c.Status(400).JSON(fiber.Map{
-			"error":   "Invalid name",
-			"message": "O nome não deve conter mais de 20 caracteres",
-		})
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid name", "message": "O nome não deve conter mais de 20 caracteres"})
 	}
 
 	passwordRegex := regexp2.MustCompile(`^(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%\^&\*\(\)_\+\-=\[\]{};':"\\|,.<>\/?]).{6,}$`, 0)
 	match, _ := passwordRegex.MatchString(modelUser.Password)
+
 	if !match {
-		return c.Status(400).JSON(fiber.Map{
-			"error":   "Invalid password",
-			"message": "A senha deve possuir no mínimo 6 caracteres, contendo uma letra maiúscula, um número e um caractere especial",
-		})
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid password", "message": "A senha deve possuir no mínimo 6 caracteres, contendo uma letra maiúscula, um número e um caractere especial"})
 	}
 
 	emailRegex := regexp2.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`, 0)
 	match, _ = emailRegex.MatchString(modelUser.Email)
+
 	if !match {
-		return c.Status(400).JSON(fiber.Map{
-			"error":   "Invalid email",
-			"message": "O email inserido não é válido",
-		})
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid email", "message": "O email inserido não é válido"})
 	}
 
 	modelUser.LastLogin = time.Now()
@@ -79,57 +72,20 @@ func (u *UserHandler) RegisterUser(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Internal Server Error", "error": err.Error()})
 	}
+
 	modelUser.Password = string(hash)
 
-	err = u.UserRepository.InsertUser(&modelUser)
+	idUser, err := u.UserRepository.InsertUser(&modelUser)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Internal Server Error", "error": err.Error()})
 	}
 
-	token := security.Generate4DigitToken()
-
-	userToken := &model.UserAuthenticationToken{
-		UserID:    modelUser.ID,
-		Token:     token,
-		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(10 * time.Minute),
+	if err := u.UserAuthenticationHandler.HandleInitialAuthentication(idUser); err != nil {
+		fmt.Println(err)
+		return c.Status(500).JSON(fiber.Map{"error": "Erro ao enviar e-mail de verificação"})
 	}
 
-	if err := u.UserAuthenticationTokenRepository.Insert(c.Context(), userToken); err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "Internal Server Error",
-			"error":   "Failed to create authentication token",
-		})
-	}
-
-	templateBytes, err := os.ReadFile("authEmail.html")
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "Internal Server Error",
-			"error":   "Email template not found",
-		})
-	}
-
-	html := strings.Replace(string(templateBytes), "{{CODE}}", token, 1)
-
-	mail := utils.NewMailServer(
-		os.Getenv("SMTP_SERVER"),
-		os.Getenv("SMTP_PORT"),
-		os.Getenv("SMTP_FROM"),
-		os.Getenv("SMTP_USER"),
-		os.Getenv("SMTP_PASSWORD"),
-	)
-
-	if err := mail.SendEmailHTML("Seu código de confirmação", html, []string{modelUser.Email}); err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "Internal Server Error",
-			"error":   "Failed to send authentication email",
-		})
-	}
-
-	return c.Status(201).JSON(fiber.Map{
-		"message": "User created successfully. Verification code sent to email.",
-	})
+	return c.Status(201).JSON(fiber.Map{"message": "User creation successful"})
 }
 
 func (u *UserHandler) ValidateName(name string) (string, error) {

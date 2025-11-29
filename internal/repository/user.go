@@ -19,11 +19,17 @@ func NewUserRepository(conn *pgx.Conn) *UserRepository {
 	}
 }
 
-func (b *UserRepository) InsertUser(user *model.User) error {
-	_, err := b.db.Exec(context.Background(), "INSERT INTO db_nexa.tb_user (name, username, email, password, photo_url, last_login) VALUES ($1, $2, $3, $4, $5, $6)",
-		user.Name, user.Username, user.Email, user.Password, user.PhotoUrl, user.LastLogin)
+func (b *UserRepository) InsertUser(user *model.User) (string, error) {
+	var id string
+	err := b.db.QueryRow(context.Background(),
+		"INSERT INTO db_nexa.tb_user (name, username, email, password, photo_url, last_login) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+		user.Name, user.Username, user.Email, user.Password, user.PhotoUrl, user.LastLogin).Scan(&id)
 
-	return err
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
 }
 
 func (u *UserRepository) FindByFilter(key string, value any) (*model.User, error) {
