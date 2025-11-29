@@ -3,6 +3,7 @@ package api
 import (
 	"log"
 	"nexa/internal/handler"
+	"nexa/internal/utils"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
@@ -14,11 +15,19 @@ import (
 func SetupRoutes(db *pgx.Conn) {
 	_ = godotenv.Load()
 	port := os.Getenv("API_PORT")
-
 	app := fiber.New()
 	app.Use(cors.New())
 
-	userHandler := handler.NewUserHandler(db)
+	mailServer := utils.NewMailServer(
+		os.Getenv("SMTP_SERVER"),
+		os.Getenv("SMTP_PORT"),
+		os.Getenv("SMTP_FROM"),
+		os.Getenv("SMTP_USER"),
+		os.Getenv("SMTP_PASSWORD"),
+	)
+
+	authHandler := handler.NewUserAuthenticationHandler(db, mailServer)
+	userHandler := handler.NewUserHandler(db, authHandler)
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("🚀 Nexa API rodando com sucesso!")
@@ -30,22 +39,3 @@ func SetupRoutes(db *pgx.Conn) {
 	log.Printf("Servidor rodando na porta %s", port)
 	log.Fatal(app.Listen(":" + port))
 }
-
-// func SetupRoutes(client *mongo.Client) {
-// 	_ = godotenv.Load()
-// 	port := os.Getenv("API_PORT")
-
-// 	app := fiber.New()
-// 	app.Use(cors.New())
-
-// 	mailServer := utils.InitMailServer()
-// 	authHandler := handler.NewUserAuthenticationHandler(client, mailServer)
-// 	userHandler := handler.NewUserHandler(client, authHandler)
-// 	followHandler := handler.NewFollowHandler(client)
-// 	projectHandler := handler.NewProjectHandler(client)
-
-// 	app.Post("/user", userHandler.RegisterUser)
-
-// 	log.Printf("Servidor rodando na porta %s", port)
-// 	log.Fatal(app.Listen(fmt.Sprintf(":%s", port)))
-// }

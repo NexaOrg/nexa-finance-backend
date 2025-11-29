@@ -17,7 +17,6 @@ type MailServer struct {
 
 func NewMailServer(server, port, from, user, password string) *MailServer {
 	auth := smtp.PlainAuth("", user, password, server)
-
 	return &MailServer{
 		Server: server,
 		Port:   port,
@@ -27,24 +26,39 @@ func NewMailServer(server, port, from, user, password string) *MailServer {
 }
 
 func (ms *MailServer) SendEmailHTML(subject, html string, to []string) error {
+	if len(to) == 0 {
+		return fmt.Errorf("no recipients provided")
+	}
+
 	client, err := ms.connect()
 	if err != nil {
 		return fmt.Errorf("failed to connect to mail server: %s", err)
 	}
+	defer client.Quit()
+
+	if err = client.Mail(ms.From); err != nil {
+		return fmt.Errorf("error setting sender: %s", err)
+	}
 
 	for _, recipient := range to {
 		if err = client.Rcpt(recipient); err != nil {
-			return fmt.Errorf("error setting recipient: %s", err)
+			return fmt.Errorf("error setting recipient %s: %s", recipient, err)
 		}
 	}
 
 	w, err := client.Data()
 	if err != nil {
-		return fmt.Errorf("error sending data: %s", err)
+		return fmt.Errorf("error initiating data: %s", err)
 	}
 
-	headers := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";"
-	msg := "Subject: " + subject + "\n" + headers + "\n\n" + html
+	headers := fmt.Sprintf(
+		"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-version: 1.0\r\nContent-Type: text/html; charset=\"UTF-8\"\r\n\r\n",
+		ms.From,
+		to[0],
+		subject,
+	)
+
+	msg := headers + html
 
 	_, err = w.Write([]byte(msg))
 	if err != nil {
@@ -54,11 +68,6 @@ func (ms *MailServer) SendEmailHTML(subject, html string, to []string) error {
 	err = w.Close()
 	if err != nil {
 		return fmt.Errorf("error closing writer: %s", err)
-	}
-
-	err = client.Quit()
-	if err != nil {
-		return fmt.Errorf("error quit client: %s", err)
 	}
 
 	return nil
@@ -72,6 +81,7 @@ func (ms *MailServer) connect() (*smtp.Client, error) {
 
 	client, err := ms.newClient(conn)
 	if err != nil {
+		conn.Close()
 		return nil, err
 	}
 
@@ -80,13 +90,13 @@ func (ms *MailServer) connect() (*smtp.Client, error) {
 
 func (ms *MailServer) newConnection() (*tls.Conn, error) {
 	addr := ms.Server + ":" + ms.Port
-
 	dialer := &net.Dialer{
-		Timeout: 10 * time.Second,
+		Timeout: 15 * time.Second,
 	}
 
 	tlsConfig := &tls.Config{
-		MinVersion: tls.VersionTLS13,
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: false,
 	}
 
 	conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
@@ -105,10 +115,6 @@ func (ms *MailServer) newClient(conn *tls.Conn) (*smtp.Client, error) {
 
 	if err = client.Auth(ms.Auth); err != nil {
 		return nil, fmt.Errorf("SMTP authentication error: %s", err)
-	}
-
-	if err = client.Mail(ms.From); err != nil {
-		return nil, fmt.Errorf("error setting sender: %s", err)
 	}
 
 	return client, nil

@@ -33,11 +33,15 @@ type UserHandler struct {
 	UserAuthenticationHandler *UserAuthenticationHandler
 }
 
-func NewUserHandler(db *pgx.Conn) *UserHandler {
+func NewUserHandler(db *pgx.Conn, authHandler *UserAuthenticationHandler) *UserHandler {
+	if authHandler == nil {
+		panic("UserAuthenticationHandler cannot be nil")
+	}
+
 	return &UserHandler{
 		UserRepository:            repository.NewUserRepository(db),
 		UserFactory:               factory.NewUserFactory(),
-		UserAuthenticationHandler: NewUserAuthenticationHandler(db, nil),
+		UserAuthenticationHandler: authHandler,
 	}
 }
 

@@ -217,11 +217,14 @@
 
             <div class="code-section">
                 <div class="code-label">Seu Código de Verificação</div>
+
                 <div class="code-display">
-                    {{range $i, $r := .Code}}
-                    <div class="code-digit">{{printf "%c" $r}}</div>
-                    {{end}}
+                    <div class="code-digit">{{ index .Code 0 }}</div>
+                    <div class="code-digit">{{ index .Code 1 }}</div>
+                    <div class="code-digit">{{ index .Code 2 }}</div>
+                    <div class="code-digit">{{ index .Code 3 }}</div>
                 </div>
+
                 <div class="code-info">Este código expira em 15 minutos</div>
             </div>
 
