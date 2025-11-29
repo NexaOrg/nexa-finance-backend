@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -140,30 +141,6 @@
             color: #0D1928;
         }
 
-        .cta-button {
-            display: inline-block;
-            background: #F39F03;
-            color: white;
-            text-decoration: none;
-            padding: 16px 40px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .cta-button:hover {
-            background: #d88f02;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(243, 159, 3, 0.3);
-        }
-
-        .button-container {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
         .footer {
             border-top: 1px solid #e0e0e0;
             padding-top: 32px;
@@ -199,7 +176,9 @@
         }
 
         @media (max-width: 600px) {
-            .header, .content, .email-footer {
+            .header,
+            .content,
+            .email-footer {
                 padding: 32px 24px;
             }
 
@@ -219,6 +198,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="email-container">
         <div class="header">
@@ -228,34 +208,33 @@
         </div>
 
         <div class="content">
-            <div class="greeting">Olá!</div>
-            
+            <div class="greeting">Olá, {{.Name}}!</div>
+
             <div class="message">
-                Recebemos sua solicitação de cadastro. Para garantir a segurança da sua conta, 
+                Recebemos sua solicitação de cadastro. Para garantir a segurança da sua conta,
                 precisamos verificar seu endereço de email.
             </div>
 
             <div class="code-section">
                 <div class="code-label">Seu Código de Verificação</div>
                 <div class="code-display">
-                    <div class="code-digit">3</div>
-                    <div class="code-digit">7</div>
-                    <div class="code-digit">8</div>
-                    <div class="code-digit">5</div>
+                    {{range $i, $r := .Code}}
+                    <div class="code-digit">{{printf "%c" $r}}</div>
+                    {{end}}
                 </div>
                 <div class="code-info">Este código expira em 15 minutos</div>
             </div>
 
             <div class="warning-box">
                 <p>
-                    <strong>⚠️ Importante:</strong> Digite este código na tela de autenticação 
+                    <strong>⚠️ Importante:</strong> Digite este código na tela de autenticação
                     para completar seu cadastro. Nunca compartilhe este código com ninguém.
                 </p>
             </div>
 
             <div class="footer">
                 <div class="footer-text">
-                    Se você não solicitou este código, pode ignorar este email com segurança. 
+                    Se você não solicitou este código, pode ignorar este email com segurança.
                     Sua conta permanecerá protegida.
                 </div>
                 <div class="help-text">
@@ -272,4 +251,5 @@
         </div>
     </div>
 </body>
+
 </html>
